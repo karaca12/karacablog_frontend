@@ -1,7 +1,7 @@
 import {useEffect, useState} from "react";
 import axios from "axios";
 import {
-    Box,
+    Box, Button,
     Chip,
     Container,
     Divider,
@@ -11,7 +11,7 @@ import {
     Paper,
     Typography
 } from "@mui/material";
-import {useParams} from "react-router-dom";
+import {useNavigate, useParams} from "react-router-dom";
 import TopAppBar from "./TopAppBar.jsx";
 
 function Post({onLogout}) {
@@ -20,7 +20,9 @@ function Post({onLogout}) {
     const [page, setPage] = useState(1);
     const [size] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
+    const [showComments, setShowComments] = useState(false);
     const {uniqueNum} = useParams();
+    const navigate = useNavigate();
 
     useEffect(() => {
         const token = localStorage.getItem("jwt");
@@ -47,7 +49,7 @@ function Post({onLogout}) {
             console.error(error);
         })
 
-    }, [uniqueNum,page,size]);
+    }, [uniqueNum, page, size]);
 
     const handleLogout = () => {
         localStorage.removeItem('jwt')
@@ -58,45 +60,62 @@ function Post({onLogout}) {
         setPage(value);
     };
 
+    const handleDisplayComments = () => {
+        setShowComments(!showComments);
+    }
+
+    const handleAuthorClick = (author) => {
+        navigate(`/profile/${author}`)
+    }
+
 
     return (<>
             <TopAppBar handleLogout={handleLogout}/>
             <Container sx={{marginTop: 3}}>
-                <Typography variant="h4" gutterBottom>
+                <Typography variant="h4" gutterBottom sx={{ wordBreak: "break-word" }}>
                     {post.title}
                 </Typography>
                 <Divider/>
-                <Typography variant="body1" gutterBottom>
+                <Typography variant="body1" gutterBottom mt={2} sx={{ wordBreak: "break-word" }}>
                     {post.content}
                 </Typography>
-                <Typography variant="caption" color="textPrimary">
+                <Button variant="caption" color="textPrimary" ml={2} onClick={()=>handleAuthorClick(post.author)}>
                     Written by {post.author} at {post.updatedAt}
-                </Typography>
-                {post.tags && post.tags.map((tag) => (
-                    <Paper key={tag} sx={{margin: 1, padding: 1}}>
-                        {tag}
-                    </Paper>
-                ))}
-                <Divider>
-                    <Chip label="COMMENTS"/>
-                </Divider>
-                <List>
-                    {comments.map((comment) => (
-                        <ListItem key={comment.uniqueNum} alignItems="flex-start">
-                            <Paper sx={{width: '100%'}}>
-                                <Typography variant="body2" color="textPrimary">
-                                    {comment.content}
-                                </Typography>
-                                <Typography variant="caption" color="textPrimary">
-                                    Written by {comment.author} at {comment.updatedAt}
-                                </Typography>
-                            </Paper>
-                        </ListItem>
+                </Button>
+                <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
+                    {post.tags &&post.tags.map((tag) => (
+                        //todo:Add onClick search for tags
+                        <Button onClick={() => console.log('blabla')} key={tag}
+                                sx={{margin: 0.5, padding: 1,wordBreak: "break-word"}}>
+                            {tag}
+                        </Button>
                     ))}
-                </List>
-                <Box display="flex" justifyContent="space-between" my={2}>
-                    <Pagination count={totalPages} page={page} onChange={handlePageChange} color="primary"/>
                 </Box>
+                <Divider>
+                    <Chip label="COMMENTS" onClick={handleDisplayComments} color="primary"/>
+                </Divider>
+                {showComments &&
+                    <div>
+                        <List>
+                            {comments.map((comment) => (
+                                <ListItem key={comment.uniqueNum} alignItems="flex-start">
+                                    <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
+                                        <Typography variant="body1" gutterBottom ml={2} mt={1} sx={{ wordBreak: "break-word" }}>
+                                            {post.content}
+                                        </Typography>
+                                        <Button variant="caption" color="textPrimary" onClick={()=>handleAuthorClick(comment.author)}>
+                                            Written by {comment.author} at {comment.updatedAt}
+                                        </Button>
+                                    </Paper>
+                                </ListItem>
+                            ))}
+                        </List>
+                        <Box display="flex" justifyContent="space-between" my={2}>
+                            <Pagination count={totalPages} page={page} onChange={handlePageChange} color="primary"/>
+                        </Box>
+                    </div>
+                }
+
             </Container>
         </>
     )
