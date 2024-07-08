@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {Fragment, useEffect, useState} from "react";
 import axios from "axios";
 import {useParams} from "react-router-dom";
 import TopAppBar from "./TopAppBar.jsx";
@@ -13,10 +13,10 @@ function Profile({onLogout}) {
             {
                 headers: {Authorization: 'Bearer ' + token}
             })
-            .then(response=>{
+            .then(response => {
                 setUser(response.data)
-            }).catch(error=>{
-                console.error(error);
+            }).catch(error => {
+            console.error(error);
         })
     }, [username]);
 
@@ -25,9 +25,9 @@ function Profile({onLogout}) {
         onLogout(false);
     }
 
-    return (<>
+    return (<Fragment>
         <TopAppBar handleLogout={handleLogout}/>
-        <Container sx={{marginTop:3}}>
+        <Container sx={{marginTop: 3}}>
             <Typography variant="h4" gutterBottom>
                 Profile
             </Typography>
@@ -51,7 +51,7 @@ function Profile({onLogout}) {
             </Paper>
         </Container>
 
-    </>)
+    </Fragment>)
 }
 
 export default Profile;

@@ -1,27 +1,26 @@
 import * as yup from "yup";
 import {useState} from "react";
-import { useForm} from "react-hook-form";
+import {useForm} from "react-hook-form";
 import {yupResolver} from "@hookform/resolvers/yup";
 import axios from "axios";
 import {Alert, Box, Button, Container, TextField, Typography} from "@mui/material";
 
-const registerSchema = yup.object().shape({
-    email: yup.string().email('Please enter a valid email').required('Email is required'),
-    username: yup.string().min(3, 'Username must be at least 3 characters').max(20, 'Username must be maximum 20 of characters').required('Username is required'),
-    password: yup.string().min(6, 'Password must be at least 6 characters').max(20, 'Password must be maximum 20 of characters').required('Password is required'),
-    firstName: yup.string().min(1, 'Name must be at least 1 character').max(50, 'Name must be maximum 50 of characters').required('Name is required'),
-    lastName: yup.string().min(1, 'Surname must be at least 1 character').max(50, 'Surname must be maximum 50 of characters').required('Surname is required'),
-    birthDate: yup.date().required('Birth date is required')
-});
-
-const loginSchema = yup.object().shape({
-    username: yup.string().min(3, 'Username must be at least 3 characters').max(20, 'Username must be maximum 20 of characters').required('Username is required'),
-    password: yup.string().min(6, 'Password must be at least 6 characters').max(20, 'Password must be maximum 20 of characters').required('Password is required'),
-});
-
 function Auth({onAuthChange}) {
     const [isRegistering, setIsRegistering] = useState(false);
     const [error, setError] = useState(null);
+    const registerSchema = yup.object().shape({
+        email: yup.string().email('Please enter a valid email').required('Email is required'),
+        username: yup.string().min(3, 'Username must be at least 3 characters').max(20, 'Username must be maximum 20 of characters').required('Username is required'),
+        password: yup.string().min(6, 'Password must be at least 6 characters').max(20, 'Password must be maximum 20 of characters').required('Password is required'),
+        firstName: yup.string().min(1, 'Name must be at least 1 character').max(50, 'Name must be maximum 50 of characters').required('Name is required'),
+        lastName: yup.string().min(1, 'Surname must be at least 1 character').max(50, 'Surname must be maximum 50 of characters').required('Surname is required'),
+        birthDate: yup.date().required('Birth date is required')
+    });
+
+    const loginSchema = yup.object().shape({
+        username: yup.string().min(3, 'Username must be at least 3 characters').max(20, 'Username must be maximum 20 of characters').required('Username is required'),
+        password: yup.string().min(6, 'Password must be at least 6 characters').max(20, 'Password must be maximum 20 of characters').required('Password is required'),
+    });
 
     const loginForm = useForm({
         resolver: yupResolver(loginSchema)
@@ -153,7 +152,7 @@ function Auth({onAuthChange}) {
                         </Button>
                     </Box>
                 </form>
-                )}
+            )}
             <Box display="flex" justifyContent="center" my={2}>
                 <Button onClick={handleToggle} variant="outlined" color="primary">
                     {isRegistering ? 'Already have an account?' : 'Don\'t have an account?'}

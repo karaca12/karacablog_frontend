@@ -1,10 +1,25 @@
-import {AppBar, Box, Button, IconButton, Toolbar, Typography} from "@mui/material";
+import {
+    AppBar,
+    Box,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+    IconButton,
+    Toolbar
+} from "@mui/material";
 import {AccountBoxOutlined} from "@mui/icons-material";
 import {useNavigate} from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
+import {useState} from "react";
 
 function TopAppBar({handleLogout}) {
     const navigate = useNavigate();
+    const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+
+
     const handleProfileClick = () => {
         const token = localStorage.getItem('jwt');
         if (token) {
@@ -16,19 +31,43 @@ function TopAppBar({handleLogout}) {
         }
     };
 
+    const handleLogoutClickOpen = () => {
+        setLogoutDialogOpen(true)
+    }
+
+    const handleLogoutClickClose = () => {
+        setLogoutDialogOpen(false)
+    }
+
+    const handleLogoClick = () => {
+        navigate('/home')
+    }
+
     return (
         <Box sx={{flexGrow: 1}}>
             <AppBar position="static">
                 <Toolbar>
-                    <Typography variant="h6" component="div" sx={{flexGrow: 1}}>
+                    <Button variant="h6" component="div" sx={{flexGrow: 1}} onClick={handleLogoClick}>
                         Karacablog
-                    </Typography>
-                    <IconButton onClick={()=>handleProfileClick()}>
-                        <AccountBoxOutlined color="secondary"/>
+                    </Button>
+                    <IconButton onClick={() => handleProfileClick()} size="large">
+                        <AccountBoxOutlined color="secondary" fontSize="large"/>
                     </IconButton>
-                    <Button variant="contained" color="secondary" onClick={handleLogout}>Logout</Button>
+                    <Button variant="contained" color="secondary" onClick={handleLogoutClickOpen}>Logout</Button>
                 </Toolbar>
             </AppBar>
+            <Dialog open={logoutDialogOpen} onClose={handleLogoutClickClose}>
+                <DialogTitle>Logout</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to logout?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleLogoutClickClose} color="primary">Cancel</Button>
+                    <Button type="submit" onClick={handleLogout} color="error">Logout</Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     )
 

@@ -1,21 +1,30 @@
-import {useEffect, useState} from "react";
+import {Fragment, useEffect, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import axios from "axios";
 import {
-    Box, Button,
-    Container, Dialog, DialogActions, DialogContent, DialogTitle,
-    Divider, Fab,
-    List, ListItem,
+    Box,
+    Button,
+    Container,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Divider,
+    Fab,
+    List,
+    ListItem,
     ListItemButton,
     ListItemText,
     Pagination,
-    Paper, TextField,
-    Typography
+    Paper,
+    TextField,
+    Typography,
+    useMediaQuery
 } from "@mui/material";
 import TopAppBar from "./TopAppBar.jsx";
 import {Add} from "@mui/icons-material";
 import {jwtDecode} from "jwt-decode";
-
+import {useTheme} from '@mui/material/styles';
 
 function Home({onLogout}) {
     const [posts, setPosts] = useState([]);
@@ -29,10 +38,14 @@ function Home({onLogout}) {
     const [newTag, setNewTag] = useState('');
     const [tags, setTags] = useState([]);
     const [errors, setErrors] = useState({});
+    const theme = useTheme();
+    const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
+    const token = localStorage.getItem("jwt");
+    const decodedToken = jwtDecode(token);
+    const user = decodedToken.sub;
 
 
     useEffect(() => {
-        const token = localStorage.getItem("jwt");
         axios.get(`http://localhost:8080/api/posts?page=${page - 1}&size=${size}`, {
             headers: {
                 Authorization: 'Bearer ' + token
@@ -44,7 +57,7 @@ function Home({onLogout}) {
             console.error(error);
         })
 
-    }, [navigate, page, size])
+    }, [navigate, page, size, token])
 
     const handleLogout = () => {
         localStorage.removeItem('jwt')
@@ -67,10 +80,6 @@ function Home({onLogout}) {
     }
 
     const handleCreatePost = () => {
-        const token = localStorage.getItem('jwt');
-        const decodedToken = jwtDecode(token);
-        const author = decodedToken.sub;
-
         let formErrors = {};
         if (!newPostTitle.trim()) {
             formErrors.title = "Title cannot be empty";
@@ -85,7 +94,7 @@ function Home({onLogout}) {
             const newPost = {
                 title: newPostTitle,
                 content: newPostContent,
-                author: author,
+                author: user,
                 tags: tags
             };
 
@@ -124,7 +133,8 @@ function Home({onLogout}) {
         navigate(`/profile/${author}`)
     }
 
-    return (<>
+    return (
+        <Fragment>
             <TopAppBar handleLogout={handleLogout}/>
             <Container sx={{flexWrap: 'wrap', marginTop: 2}}>
                 <Typography variant="h4" gutterBottom>
@@ -133,35 +143,37 @@ function Home({onLogout}) {
                 <Divider/>
                 <List>
                     {posts.map((post) => (
-                        <div key={post.uniqueNum}>
+                        <Fragment key={post.uniqueNum}>
                             <ListItem alignItems="flex-start">
                                 <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
                                     <ListItemButton onClick={() => handlePostClick(post.uniqueNum)}>
                                         <ListItemText primary={
-                                            <Typography variant="h6" color="textPrimary" sx={{ wordBreak: "break-word" }}>
+                                            <Typography variant="h6" color="textPrimary" sx={{wordBreak: "break-word"}}>
                                                 {post.title}
                                             </Typography>}
                                                       secondary={
-                                            <Typography variant="body2" color="textPrimary" sx={{ wordBreak: "break-word" }}>
-                                                {post.content.length > 1000 ? post.content.substring(0, 1000) + "..." : post.content}
-                                            </Typography>
-                                        }/>
+                                                          <Typography variant="body2" color="textPrimary"
+                                                                      sx={{wordBreak: "break-word"}}>
+                                                              {post.content.length > 1000 ? post.content.substring(0, 1000) + "..." : post.content}
+                                                          </Typography>
+                                                      }/>
                                     </ListItemButton>
-                                    <Button variant="caption" color="textPrimary" ml={2} onClick={()=>handleAuthorClick(post.author)}>
-                                        Written by {post.author} at {post.updatedAt}
+                                    <Button variant="caption" color="textPrimary" ml={2}
+                                            onClick={() => handleAuthorClick(post.author)}>
+                                        Written by {post.author} at {post.createdAt}
                                     </Button>
                                     <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
                                         {post.tags.map((tag) => (
                                             //todo:Add onClick search for tags
                                             <Button onClick={() => console.log('blabla')} key={tag}
-                                                    sx={{margin: 0.5, padding: 1,wordBreak: "break-word"}}>
+                                                    sx={{margin: 0.5, padding: 1, wordBreak: "break-word"}}>
                                                 {tag}
                                             </Button>
                                         ))}
                                     </Box>
                                 </Paper>
                             </ListItem>
-                        </div>
+                        </Fragment>
                     ))}
                 </List>
                 <Box display="flex" justifyContent="space-between" my={2}>
@@ -177,10 +189,11 @@ function Home({onLogout}) {
                 position: 'fixed',
             }}>
                 <Add/>
-                Add Post
+                Create Post
             </Fab>
-            <Dialog open={createPostDialogOpen} onClose={handleCreatePostClickClose}>
-                <DialogTitle title="Create Post"/>
+            <Dialog open={createPostDialogOpen} onClose={handleCreatePostClickClose} fullWidth={true}
+                    fullScreen={fullScreen}>
+                <DialogTitle>Create Post</DialogTitle>
                 <DialogContent>
                     <TextField
                         autoFocus
@@ -207,7 +220,7 @@ function Home({onLogout}) {
                         type="text"
                         fullWidth
                         multiline
-                        rows={4}
+                        rows={12}
                         required
                         inputProps={{maxLength: 10000}}
                         value={newPostContent}
@@ -242,8 +255,7 @@ function Home({onLogout}) {
                     <Button type="submit" onClick={handleCreatePost}>Post</Button>
                 </DialogActions>
             </Dialog>
-        </>
-
+        </Fragment>
     )
 }
 
