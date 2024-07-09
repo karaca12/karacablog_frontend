@@ -50,7 +50,7 @@ function TopAppBar({handleLogout}) {
                     <Button variant="h6" component="div" sx={{flexGrow: 1}} onClick={handleLogoClick}>
                         Karacablog
                     </Button>
-                    <IconButton onClick={() => handleProfileClick()} size="large">
+                    <IconButton onClick={handleProfileClick} size="large">
                         <AccountBoxOutlined color="secondary" fontSize="large"/>
                     </IconButton>
                     <Button variant="contained" color="secondary" onClick={handleLogoutClickOpen}>Logout</Button>

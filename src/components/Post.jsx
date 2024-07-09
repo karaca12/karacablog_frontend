@@ -65,10 +65,10 @@ function Post({onLogout}) {
                 setPost(response.data)
                 if (user === response.data.author) {
                     setIsOwnPost(true)
+                    setNewTags(response.data.tags)
+                    setNewPostTitle(response.data.title)
+                    setNewPostContent(response.data.content)
                 }
-                setNewTags(response.data.tags)
-                setNewPostTitle(response.data.title)
-                setNewPostContent(response.data.content)
             }).catch(error => {
             console.error(error);
         })
@@ -460,7 +460,6 @@ function Post({onLogout}) {
                     <TextField
                         margin="normal"
                         variant="standard"
-                        id="commentContent"
                         label="Content"
                         type="text"
                         fullWidth
@@ -487,7 +486,6 @@ function Post({onLogout}) {
                     <TextField
                         margin="normal"
                         variant="standard"
-                        id="commentContent"
                         label="Content"
                         type="text"
                         fullWidth

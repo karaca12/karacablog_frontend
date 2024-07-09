@@ -66,6 +66,7 @@ function Auth({onAuthChange}) {
                     </Typography>
 
                     <TextField
+                        id="usernameRegister"
                         fullWidth
                         label="Username"
                         margin="normal"
@@ -74,6 +75,7 @@ function Auth({onAuthChange}) {
                         helperText={registerForm.formState.errors.username?.message}
                     />
                     <TextField
+                        id="passwordRegister"
                         fullWidth
                         label="Password"
                         type="password"
@@ -83,6 +85,7 @@ function Auth({onAuthChange}) {
                         helperText={registerForm.formState.errors.password?.message}
                     />
                     <TextField
+                        id="email"
                         fullWidth
                         label="Email"
                         margin="normal"
@@ -91,6 +94,7 @@ function Auth({onAuthChange}) {
                         helperText={registerForm.formState.errors.email?.message}
                     />
                     <TextField
+                        id="firstName"
                         fullWidth
                         label="Name"
                         margin="normal"
@@ -99,6 +103,7 @@ function Auth({onAuthChange}) {
                         helperText={registerForm.formState.errors.firstName?.message}
                     />
                     <TextField
+                        id="lastName"
                         fullWidth
                         label="Surname"
                         margin="normal"
@@ -107,6 +112,7 @@ function Auth({onAuthChange}) {
                         helperText={registerForm.formState.errors.lastName?.message}
                     />
                     <TextField
+                        id="birthDate"
                         fullWidth
                         label="Birth Date"
                         type="date"
@@ -130,6 +136,7 @@ function Auth({onAuthChange}) {
                         Login
                     </Typography>
                     <TextField
+                        id="usernameLogin"
                         fullWidth
                         label="Username"
                         margin="normal"
@@ -138,6 +145,7 @@ function Auth({onAuthChange}) {
                         helperText={loginForm.formState.errors.username?.message}
                     />
                     <TextField
+                        id="passwordLogin"
                         fullWidth
                         label="Password"
                         type="password"
