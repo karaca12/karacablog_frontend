@@ -4,15 +4,28 @@ import Auth from "./components/Auth.jsx";
 import {useEffect, useState} from "react";
 import Post from "./components/Post.jsx";
 import Profile from "./components/Profile.jsx";
+import {jwtDecode} from "jwt-decode";
 
 
 function DefaultRoutes() {
-    const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('jwt'));
+    const jwt = localStorage.getItem("jwt");
+    
+    const [isAuthenticated, setIsAuthenticated] = useState(!!jwt);
 
     useEffect(() => {
-        const jwt = localStorage.getItem('jwt');
-        setIsAuthenticated(!!jwt);
-    }, []);
+        if (jwt) {
+            const decodedToken = jwtDecode(jwt);
+
+            if (decodedToken.exp * 1000 < Date.now()) {
+                setIsAuthenticated(false);
+                localStorage.removeItem('jwt');
+            } else {
+                setIsAuthenticated(true);
+            }
+        } else {
+            setIsAuthenticated(false);
+        }
+    }, [jwt]);
 
     return (
         <Routes>

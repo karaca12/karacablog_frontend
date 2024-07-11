@@ -69,10 +69,13 @@ function Post({onLogout}) {
                     setNewPostTitle(response.data.title)
                     setNewPostContent(response.data.content)
                 }
+                fetchComments()
             }).catch(error => {
             console.error(error);
         })
+    }, [uniqueNum, page, token, user]);
 
+    const fetchComments = () => {
         axios.get(`http://localhost:8080/api/comments/post/${uniqueNum}?page=${page - 1}&size=${size}`,
             {
                 headers:
@@ -84,7 +87,7 @@ function Post({onLogout}) {
             }).catch(error => {
             console.error(error);
         })
-    }, [uniqueNum, page, token, size, user]);
+    }
 
     const handleLogout = () => {
         localStorage.removeItem('jwt')
@@ -101,6 +104,14 @@ function Post({onLogout}) {
 
     const handleAuthorClick = (author) => {
         navigate(`/profile/${author}`)
+    }
+
+    const reloadToPageOne = () => {
+        if (page === 1) {
+            window.location.reload();
+        } else {
+            setPage(1);
+        }
     }
 
     //edit post
@@ -129,11 +140,7 @@ function Post({onLogout}) {
                 }
             }).then(() => {
                 setEditPostDialogOpen(false);
-                if (page === 1) {
-                    window.location.reload();
-                } else {
-                    setPage(1);
-                }
+                reloadToPageOne()
             }).catch(error => {
                 console.error(error);
             });
@@ -202,11 +209,7 @@ function Post({onLogout}) {
             }).then(() => {
                 setAddCommentDialogOpen(false)
                 setNewCommentContent('')
-                if (page === 1) {
-                    window.location.reload();
-                } else {
-                    setPage(1);
-                }
+                reloadToPageOne()
             }).catch(error => {
                 console.error(error)
             })
@@ -229,11 +232,8 @@ function Post({onLogout}) {
                 Authorization: 'Bearer ' + token
             }
         }).then(() => {
-            if (page === 1) {
-                window.location.reload();
-            } else {
-                setPage(1);
-            }
+            setDeleteCommentDialogOpen(false)
+            reloadToPageOne()
         }).catch(error => {
             console.error(error);
         });
@@ -269,13 +269,9 @@ function Post({onLogout}) {
                     Authorization: 'Bearer ' + token
                 }
             }).then(() => {
-                setEditCommentDialogOpen(false)
-                setEditedCommentContent('')
-                if (page === 1) {
-                    window.location.reload();
-                } else {
-                    setPage(1);
-                }
+                setEditCommentDialogOpen(false);
+                setEditedCommentContent('');
+                fetchComments()
             }).catch(error => {
                 console.error(error)
             })

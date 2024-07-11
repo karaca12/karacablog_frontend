@@ -51,6 +51,7 @@ function Auth({onAuthChange}) {
             .then(response => {
                 localStorage.setItem('jwt', response.data)
                 onAuthChange(true)
+                console.log(data.birthDate)
             })
             .catch(error => {
                 setError(error.response?.data?.message || 'Registration failed')

@@ -57,7 +57,7 @@ function Home({onLogout}) {
             console.error(error);
         })
 
-    }, [navigate, page, size, token])
+    }, [page, size, token])
 
     const handleLogout = () => {
         localStorage.removeItem('jwt')
@@ -119,7 +119,7 @@ function Home({onLogout}) {
     }
 
     const handleAddTag = () => {
-        if (newTag && !tags.includes(newTag)) {
+        if (newTag && tags.length < 4 && !tags.includes(newTag)) {
             setTags([...tags, newTag]);
             setNewTag('');
         }
@@ -239,8 +239,11 @@ function Home({onLogout}) {
                         inputProps={{maxLength: 50}}
                         value={newTag}
                         onChange={(e) => setNewTag(e.target.value)}
+                        disabled={tags.length === 4}
                     />
-                    <Button onClick={handleAddTag}>Add Tag</Button>
+                    <Button disabled={tags.length === 4} onClick={handleAddTag}>Add Tag</Button>
+                    {tags.length === 4 &&
+                        <Typography>Only 4 tags can be added</Typography>}
                     <Box sx={{display: 'flex', flexWrap: 'wrap', marginTop: 2}}>
                         {tags.map((tag, index) => (
                             <Paper key={index} sx={{margin: 0.5, padding: 1}}>
