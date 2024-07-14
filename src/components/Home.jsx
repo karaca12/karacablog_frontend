@@ -26,7 +26,7 @@ import {Add} from "@mui/icons-material";
 import {jwtDecode} from "jwt-decode";
 import {useTheme} from '@mui/material/styles';
 
-function Home({onLogout}) {
+function Home({isAuthenticated, setIsAuthenticated}) {
     const [posts, setPosts] = useState([]);
     const [page, setPage] = useState(1);
     const [size] = useState(10);
@@ -40,46 +40,31 @@ function Home({onLogout}) {
     const [errors, setErrors] = useState({});
     const theme = useTheme();
     const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
-    const token = localStorage.getItem("jwt");
-    const decodedToken = jwtDecode(token);
-    const user = decodedToken.sub;
-
 
     useEffect(() => {
-        axios.get(`http://localhost:8080/api/posts?page=${page - 1}&size=${size}`, {
-            headers: {
-                Authorization: 'Bearer ' + token
-            }
-        }).then(response => {
-            setPosts(response.data.posts);
-            setTotalPages(response.data.totalPages);
-        }).catch(error => {
+        axios.get(`http://localhost:8080/api/posts?page=${page - 1}&size=${size}`)
+            .then(response => {
+                setPosts(response.data.posts);
+                setTotalPages(response.data.totalPages);
+            }).catch(error => {
             console.error(error);
         })
 
-    }, [page, size, token])
-
-    const handleLogout = () => {
-        localStorage.removeItem('jwt')
-        onLogout(false);
-    }
+    }, [page, size])
 
     const handlePageChange = (event, value) => {
         setPage(value);
     };
 
-    const handlePostClick = (uniqueNum) => {
+    const handleClickPost = (uniqueNum) => {
         navigate(`/post/${uniqueNum}`);
     };
 
-    const handleCreatePostClickOpen = () => {
-        setCreatePostDialogOpen(true)
-    }
-    const handleCreatePostClickClose = () => {
-        setCreatePostDialogOpen(false)
-    }
-
+    const handleClickCreatePost = () => setCreatePostDialogOpen((state)=>!state)
     const handleCreatePost = () => {
+        const token = localStorage.getItem("jwt");
+        const decodedToken = jwtDecode(token);
+        const user = decodedToken.sub;
         let formErrors = {};
         if (!newPostTitle.trim()) {
             formErrors.title = "Title cannot be empty";
@@ -135,7 +120,7 @@ function Home({onLogout}) {
 
     return (
         <Fragment>
-            <TopAppBar handleLogout={handleLogout}/>
+            <TopAppBar isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated}/>
             <Container sx={{flexWrap: 'wrap', marginTop: 2}}>
                 <Typography variant="h4" gutterBottom>
                     Posts
@@ -146,7 +131,7 @@ function Home({onLogout}) {
                         <Fragment key={post.uniqueNum}>
                             <ListItem alignItems="flex-start">
                                 <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
-                                    <ListItemButton onClick={() => handlePostClick(post.uniqueNum)}>
+                                    <ListItemButton onClick={() => handleClickPost(post.uniqueNum)}>
                                         <ListItemText primary={
                                             <Typography variant="h6" color="textPrimary" sx={{wordBreak: "break-word"}}>
                                                 {post.title}
@@ -180,18 +165,21 @@ function Home({onLogout}) {
                     <Pagination count={totalPages} page={page} onChange={handlePageChange} color="primary"/>
                 </Box>
             </Container>
-            <Fab onClick={handleCreatePostClickOpen} variant="extended" color="primary" aria-label="add" sx={{
-                margin: 0,
-                top: 'auto',
-                right: 20,
-                bottom: 20,
-                left: 'auto',
-                position: 'fixed',
-            }}>
-                <Add/>
-                Create Post
-            </Fab>
-            <Dialog open={createPostDialogOpen} onClose={handleCreatePostClickClose} fullWidth={true}
+            {isAuthenticated &&
+                <Fab onClick={handleClickCreatePost} variant="extended" color="primary" aria-label="add" sx={{
+                    margin: 0,
+                    top: 'auto',
+                    right: 20,
+                    bottom: 20,
+                    left: 'auto',
+                    position: 'fixed',
+                }}>
+                    <Add/>
+                    Post
+                </Fab>
+
+            }
+            <Dialog open={createPostDialogOpen} onClose={handleClickCreatePost} fullWidth={true}
                     fullScreen={fullScreen}>
                 <DialogTitle>Create Post</DialogTitle>
                 <DialogContent>
@@ -254,7 +242,7 @@ function Home({onLogout}) {
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCreatePostClickClose}>Cancel</Button>
+                    <Button onClick={handleClickCreatePost}>Cancel</Button>
                     <Button type="submit" onClick={handleCreatePost}>Post</Button>
                 </DialogActions>
             </Dialog>

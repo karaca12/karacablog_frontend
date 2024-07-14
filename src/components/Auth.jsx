@@ -3,11 +3,23 @@ import {useState} from "react";
 import {useForm} from "react-hook-form";
 import {yupResolver} from "@hookform/resolvers/yup";
 import axios from "axios";
-import {Alert, Box, Button, Container, TextField, Typography} from "@mui/material";
+import {
+    Alert,
+    Box,
+    Button,
+    Dialog,
+    DialogContent,
+    DialogTitle,
+    IconButton,
+    InputAdornment,
+    TextField
+} from "@mui/material";
+import {Visibility, VisibilityOff} from "@mui/icons-material";
 
-function Auth({onAuthChange}) {
+function Auth({open, setOpen}) {
     const [isRegistering, setIsRegistering] = useState(false);
     const [error, setError] = useState(null);
+    const [showPassword, setShowPassword] = useState(false);
     const registerSchema = yup.object().shape({
         email: yup.string().email('Please enter a valid email').required('Email is required'),
         username: yup.string().min(3, 'Username must be at least 3 characters').max(20, 'Username must be maximum 20 of characters').required('Username is required'),
@@ -30,7 +42,7 @@ function Auth({onAuthChange}) {
         resolver: yupResolver(registerSchema)
     })
 
-    const handleToggle = () => {
+    const handleRegisterLoginToggle = () => {
         setIsRegistering(!isRegistering);
         setError(null)
     }
@@ -39,7 +51,8 @@ function Auth({onAuthChange}) {
         axios.post('http://localhost:8080/api/auth/login', data)
             .then(response => {
                 localStorage.setItem('jwt', response.data)
-                onAuthChange(true)
+                setOpen(false)
+                window.location.reload()
             })
             .catch(error => {
                 setError(error.response?.data?.message || 'Login failed')
@@ -50,125 +63,150 @@ function Auth({onAuthChange}) {
         axios.post('http://localhost:8080/api/auth/register', data)
             .then(response => {
                 localStorage.setItem('jwt', response.data)
-                onAuthChange(true)
-                console.log(data.birthDate)
+                setOpen(false)
+                window.location.reload()
             })
             .catch(error => {
                 setError(error.response?.data?.message || 'Registration failed')
             })
     }
 
+    const handleClickOnClose = () => setOpen((state)=>!state)
+    const handleClickShowPassword = () => setShowPassword((show) => !show);
+
     return (
-        <Container maxWidth="sm">
+        <Dialog open={open} onClose={handleClickOnClose}>
             {isRegistering ? (
                 <form onSubmit={registerForm.handleSubmit(handleRegisterSubmit)}>
-                    <Typography variant="h4" component="h1" gutterBottom sx={{textAlign: 'center'}}>
-                        Register
-                    </Typography>
-
-                    <TextField
-                        id="usernameRegister"
-                        fullWidth
-                        label="Username"
-                        margin="normal"
-                        {...registerForm.register('username')}
-                        error={!!registerForm.formState.errors.username}
-                        helperText={registerForm.formState.errors.username?.message}
-                    />
-                    <TextField
-                        id="passwordRegister"
-                        fullWidth
-                        label="Password"
-                        type="password"
-                        margin="normal"
-                        {...registerForm.register('password')}
-                        error={!!registerForm.formState.errors.password}
-                        helperText={registerForm.formState.errors.password?.message}
-                    />
-                    <TextField
-                        id="email"
-                        fullWidth
-                        label="Email"
-                        margin="normal"
-                        {...registerForm.register('email')}
-                        error={!!registerForm.formState.errors.email}
-                        helperText={registerForm.formState.errors.email?.message}
-                    />
-                    <TextField
-                        id="firstName"
-                        fullWidth
-                        label="Name"
-                        margin="normal"
-                        {...registerForm.register('firstName')}
-                        error={!!registerForm.formState.errors.firstName}
-                        helperText={registerForm.formState.errors.firstName?.message}
-                    />
-                    <TextField
-                        id="lastName"
-                        fullWidth
-                        label="Surname"
-                        margin="normal"
-                        {...registerForm.register('lastName')}
-                        error={!!registerForm.formState.errors.lastName}
-                        helperText={registerForm.formState.errors.lastName?.message}
-                    />
-                    <TextField
-                        id="birthDate"
-                        fullWidth
-                        label="Birth Date"
-                        type="date"
-                        InputLabelProps={{
-                            shrink: true,
-                        }}
-                        margin="normal"
-                        {...registerForm.register('birthDate')}
-                        error={!!registerForm.formState.errors.birthDate}
-                        helperText={registerForm.formState.errors.birthDate?.message}
-                    />
-                    <Box display="flex" justifyContent="center" my={2}>
-                        <Button type="submit" variant="contained" color="primary" sx={{mt: 2, mb: 2}}>
-                            Register
-                        </Button>
-                    </Box>
+                    <DialogTitle>Register</DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            id="usernameRegister"
+                            fullWidth
+                            label="Username"
+                            margin="normal"
+                            {...registerForm.register('username')}
+                            error={!!registerForm.formState.errors.username}
+                            helperText={registerForm.formState.errors.username?.message}
+                        />
+                        <TextField
+                            id="passwordRegister"
+                            fullWidth
+                            label="Password"
+                            type={showPassword ? 'text' : 'password'}
+                            margin="normal"
+                            {...registerForm.register('password')}
+                            error={!!registerForm.formState.errors.password}
+                            helperText={registerForm.formState.errors.password?.message}
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton onClick={handleClickShowPassword}>
+                                            {showPassword ? <VisibilityOff/> : <Visibility/>}
+                                        </IconButton>
+                                    </InputAdornment>
+                                )
+                            }}
+                        />
+                        <TextField
+                            id="email"
+                            fullWidth
+                            label="Email"
+                            margin="normal"
+                            {...registerForm.register('email')}
+                            error={!!registerForm.formState.errors.email}
+                            helperText={registerForm.formState.errors.email?.message}
+                        />
+                        <TextField
+                            id="firstName"
+                            fullWidth
+                            label="Name"
+                            margin="normal"
+                            {...registerForm.register('firstName')}
+                            error={!!registerForm.formState.errors.firstName}
+                            helperText={registerForm.formState.errors.firstName?.message}
+                        />
+                        <TextField
+                            id="lastName"
+                            fullWidth
+                            label="Surname"
+                            margin="normal"
+                            {...registerForm.register('lastName')}
+                            error={!!registerForm.formState.errors.lastName}
+                            helperText={registerForm.formState.errors.lastName?.message}
+                        />
+                        <TextField
+                            id="birthDate"
+                            fullWidth
+                            label="Birth Date"
+                            type="date"
+                            InputLabelProps={{
+                                shrink: true,
+                            }}
+                            margin="normal"
+                            {...registerForm.register('birthDate')}
+                            error={!!registerForm.formState.errors.birthDate}
+                            helperText={registerForm.formState.errors.birthDate?.message}
+                        />
+                        <Box display="flex" justifyContent="center" my={2}>
+                            <Button type="submit" variant="contained" color="primary" sx={{mt: 2, mb: 2}}>
+                                Register
+                            </Button>
+                        </Box>
+                        <Box display="flex" justifyContent="center" my={2}>
+                            <Button onClick={handleRegisterLoginToggle} variant="outlined" color="primary" sx={{mt: 2, mb: 2}}>
+                                {isRegistering ? 'Already have an account?' : 'Don\'t have an account?'}
+                            </Button>
+                        </Box>
+                    </DialogContent>
                 </form>
             ) : (
                 <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)}>
-                    <Typography variant="h4" component="h1" gutterBottom sx={{textAlign: 'center'}}>
-                        Login
-                    </Typography>
-                    <TextField
-                        id="usernameLogin"
-                        fullWidth
-                        label="Username"
-                        margin="normal"
-                        {...loginForm.register('username')}
-                        error={!!loginForm.formState.errors.username}
-                        helperText={loginForm.formState.errors.username?.message}
-                    />
-                    <TextField
-                        id="passwordLogin"
-                        fullWidth
-                        label="Password"
-                        type="password"
-                        margin="normal"
-                        {...loginForm.register('password')}
-                        error={!!loginForm.formState.errors.password}
-                        helperText={loginForm.formState.errors.password?.message}
-                    />
-                    <Box display="flex" justifyContent="center" my={2}>
-                        <Button type="submit" variant="contained" color="primary" sx={{mt: 2, mb: 2}}>
-                            Login
-                        </Button>
-                    </Box>
+                    <DialogTitle>Login</DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            id="usernameLogin"
+                            fullWidth
+                            label="Username"
+                            margin="normal"
+                            {...loginForm.register('username')}
+                            error={!!loginForm.formState.errors.username}
+                            helperText={loginForm.formState.errors.username?.message}
+                        />
+                        <TextField
+                            id="passwordLogin"
+                            fullWidth
+                            label="Password"
+                            type={showPassword ? 'text' : 'password'}
+                            margin="normal"
+                            {...loginForm.register('password')}
+                            error={!!loginForm.formState.errors.password}
+                            helperText={loginForm.formState.errors.password?.message}
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton onClick={handleClickShowPassword}>
+                                            {showPassword ? <VisibilityOff/> : <Visibility/>}
+                                        </IconButton>
+                                    </InputAdornment>
+                                )
+                            }}
+                        />
+                        <Box display="flex" justifyContent="center" my={2}>
+                            <Button type="submit" variant="contained" color="primary" sx={{mt: 2, mb: 2}}>
+                                Login
+                            </Button>
+                        </Box>
+                        <Box display="flex" justifyContent="center" my={2}>
+                            <Button onClick={handleRegisterLoginToggle} variant="outlined" color="primary" sx={{mt: 2, mb: 2}}>
+                                {isRegistering ? 'Already have an account?' : 'Don\'t have an account?'}
+                            </Button>
+                        </Box>
+                    </DialogContent>
                 </form>
             )}
-            <Box display="flex" justifyContent="center" my={2}>
-                <Button onClick={handleToggle} variant="outlined" color="primary">
-                    {isRegistering ? 'Already have an account?' : 'Don\'t have an account?'}
-                </Button>
-            </Box>
             {error && <Alert severity="error" sx={{mb: 2}}>{error}</Alert>}
-        </Container>
+        </Dialog>
     )
 }
 

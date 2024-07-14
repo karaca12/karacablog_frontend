@@ -26,7 +26,7 @@ import {Add} from "@mui/icons-material";
 import {jwtDecode} from "jwt-decode";
 import {useTheme} from "@mui/material/styles";
 
-function Post({onLogout}) {
+function Post({isAuthenticated, setIsAuthenticated}) {
     const [post, setPost] = useState([]);
     const [comments, setComments] = useState([]);
     const [page, setPage] = useState(1);
@@ -47,40 +47,34 @@ function Post({onLogout}) {
     const [tag, setTag] = useState('');
     const [newTags, setNewTags] = useState([]);
     const [deletePostDialogOpen, setDeletePostDialogOpen] = useState(false)
-    const token = localStorage.getItem('jwt');
-    const decodedToken = jwtDecode(token);
-    const user = decodedToken.sub;
     const [deleteCommentDialogOpen, setDeleteCommentDialogOpen] = useState(false)
     const [editCommentDialogOpen, setEditCommentDialogOpen] = useState(false)
     const [commentUniqueNum, setCommentUniqueNum] = useState('')
     const [editedCommentContent, setEditedCommentContent] = useState('')
 
     useEffect(() => {
-        axios.get(`http://localhost:8080/api/posts/${uniqueNum}`,
-            {
-                headers:
-                    {Authorization: 'Bearer ' + token}
-            })
+        axios.get(`http://localhost:8080/api/posts/${uniqueNum}`)
             .then(response => {
-                setPost(response.data)
-                if (user === response.data.author) {
-                    setIsOwnPost(true)
-                    setNewTags(response.data.tags)
-                    setNewPostTitle(response.data.title)
-                    setNewPostContent(response.data.content)
+                const token = localStorage.getItem('jwt');
+                if (token) {
+                    const decodedToken = jwtDecode(token);
+                    const user = decodedToken.sub;
+                    if (user === response.data.author) {
+                        setIsOwnPost(true)
+                        setNewTags(response.data.tags)
+                        setNewPostTitle(response.data.title)
+                        setNewPostContent(response.data.content)
+                    }
                 }
+                setPost(response.data)
                 fetchComments()
             }).catch(error => {
             console.error(error);
         })
-    }, [uniqueNum, page, token, user]);
+    }, [uniqueNum, page]);
 
     const fetchComments = () => {
-        axios.get(`http://localhost:8080/api/comments/post/${uniqueNum}?page=${page - 1}&size=${size}`,
-            {
-                headers:
-                    {Authorization: 'Bearer ' + token}
-            })
+        axios.get(`http://localhost:8080/api/comments/post/${uniqueNum}?page=${page - 1}&size=${size}`)
             .then(response => {
                 setComments(response.data.comments)
                 setTotalPages(response.data.totalPages)
@@ -89,18 +83,11 @@ function Post({onLogout}) {
         })
     }
 
-    const handleLogout = () => {
-        localStorage.removeItem('jwt')
-        onLogout(false);
-    }
-
     const handlePageChange = (event, value) => {
         setPage(value);
     };
 
-    const handleDisplayComments = () => {
-        setShowComments(!showComments);
-    }
+    const handleDisplayComments = () => setShowComments((state)=>!state);
 
     const handleAuthorClick = (author) => {
         navigate(`/profile/${author}`)
@@ -116,7 +103,7 @@ function Post({onLogout}) {
 
     //edit post
     const handleEditPost = () => {
-
+        const token = localStorage.getItem('jwt');
         let formErrors = {};
         if (!newPostTitle.trim()) {
             formErrors.title = "Title cannot be empty";
@@ -133,7 +120,6 @@ function Post({onLogout}) {
                 content: newPostContent,
                 tags: newTags
             };
-
             axios.put(`http://localhost:8080/api/posts/${uniqueNum}`, newPost, {
                 headers: {
                     Authorization: 'Bearer ' + token
@@ -147,12 +133,7 @@ function Post({onLogout}) {
         }
     }
 
-    const handleEditPostClickOpen = () => {
-        setEditPostDialogOpen(true)
-    }
-    const handleEditPostClickClose = () => {
-        setEditPostDialogOpen(false)
-    }
+    const handleClickEditPost = () => setEditPostDialogOpen((state)=>!state)
 
     const handleAddTag = () => {
         if (tag && !newTags.includes(tag)) {
@@ -167,7 +148,7 @@ function Post({onLogout}) {
 
     //delete post
     const handleDeletePost = () => {
-
+        const token = localStorage.getItem('jwt');
         axios.delete(`http://localhost:8080/api/posts/${uniqueNum}`, {
             headers: {
                 Authorization: 'Bearer ' + token
@@ -179,16 +160,12 @@ function Post({onLogout}) {
         });
     }
 
-    const handleDeletePostClickClose = () => {
-        setDeletePostDialogOpen(false)
-    }
-
-    const handleDeletePostClickOpen = () => {
-        setDeletePostDialogOpen(true)
-    }
-
+    const handleClickDeletePost = () => setDeletePostDialogOpen((state)=>!state)
     //add comment
     const handleAddComment = () => {
+        const token = localStorage.getItem('jwt');
+        const decodedToken = jwtDecode(token);
+        const user = decodedToken.sub;
 
         let formErrors = {}
         if (!newCommentContent.trim()) {
@@ -216,16 +193,11 @@ function Post({onLogout}) {
         }
     }
 
-    const handleAddCommentClickClose = () => {
-        setAddCommentDialogOpen(false);
-    }
-
-    const handleAddCommentClickOpen = () => {
-        setAddCommentDialogOpen(true);
-    }
+    const handleClickAddComment = () => setAddCommentDialogOpen((state)=>!state);
 
     //delete comment
     const handleDeleteComment = () => {
+        const token = localStorage.getItem('jwt');
 
         axios.delete(`http://localhost:8080/api/comments/${commentUniqueNum}`, {
             headers: {
@@ -240,18 +212,19 @@ function Post({onLogout}) {
     }
 
 
-    const handleDeleteCommentClickClose = () => {
+    const handleClickDeleteCommentClose = () => {
         setDeleteCommentDialogOpen(false)
         setCommentUniqueNum('')
     }
 
-    const handleDeleteCommentClickOpen = (deletedCommentUniqueNum) => {
+    const handleClickDeleteCommentOpen = (deletedCommentUniqueNum) => {
         setDeleteCommentDialogOpen(true)
         setCommentUniqueNum(deletedCommentUniqueNum)
     }
 
     //edit comment
     const handleEditComment = () => {
+        const token = localStorage.getItem('jwt');
 
         let formErrors = {}
         if (!editedCommentContent.trim()) {
@@ -278,12 +251,12 @@ function Post({onLogout}) {
         }
     }
 
-    const handleEditCommentClickClose = () => {
+    const handleClickEditCommentClose = () => {
         setEditCommentDialogOpen(false)
         setCommentUniqueNum('')
     }
 
-    const handleEditCommentClickOpen = (editedCommentUniqueNum, content) => {
+    const handleClickEditCommentOpen = (editedCommentUniqueNum, content) => {
         setEditCommentDialogOpen(true)
         setCommentUniqueNum(editedCommentUniqueNum)
         setEditedCommentContent(content)
@@ -291,17 +264,17 @@ function Post({onLogout}) {
 
     return (
         <Fragment>
-            <TopAppBar handleLogout={handleLogout}/>
+            <TopAppBar isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated}/>
             <Container sx={{flexWrap: 'wrap', marginTop: 2}}>
                 <Typography variant="h4" gutterBottom sx={{wordBreak: "break-word"}}>
                     {post.title}
                 </Typography>
                 {isOwnPost &&
                     <Fragment>
-                        <Button color="primary" onClick={handleEditPostClickOpen}>
+                        <Button color="primary" onClick={handleClickEditPost}>
                             Edit
                         </Button>
-                        <Button color="error" onClick={handleDeletePostClickOpen}>
+                        <Button color="error" onClick={handleClickDeletePost}>
                             Delete
                         </Button>
                     </Fragment>
@@ -329,7 +302,12 @@ function Post({onLogout}) {
                     <Fragment>
                         <List>
                             {comments.map((comment) => {
-
+                                const token = localStorage.getItem('jwt');
+                                let user = '';
+                                if (token) {
+                                    const decodedToken = jwtDecode(token);
+                                    user = decodedToken.sub
+                                }
                                 return (
                                     <ListItem key={comment.uniqueNum} alignItems="flex-start">
                                         <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
@@ -341,12 +319,13 @@ function Post({onLogout}) {
                                                     onClick={() => handleAuthorClick(comment.author)}>
                                                 Written by {comment.author} at {comment.createdAt}
                                             </Button>
+
                                             {comment.author === user &&
                                                 <Fragment>
                                                     <Button color="primary"
-                                                            onClick={() => handleEditCommentClickOpen(comment.uniqueNum, comment.content)}>Edit</Button>
+                                                            onClick={() => handleClickEditCommentOpen(comment.uniqueNum, comment.content)}>Edit</Button>
                                                     <Button color="error"
-                                                            onClick={() => handleDeleteCommentClickOpen(comment.uniqueNum)}>Delete </Button>
+                                                            onClick={() => handleClickDeleteCommentOpen(comment.uniqueNum)}>Delete </Button>
                                                 </Fragment>
                                             }
                                         </Paper>
@@ -360,18 +339,20 @@ function Post({onLogout}) {
                     </Fragment>
                 }
             </Container>
-            <Fab onClick={handleAddCommentClickOpen} variant="extended" color="primary" aria-label="add" sx={{
-                margin: 0,
-                top: 'auto',
-                right: 20,
-                bottom: 20,
-                left: 'auto',
-                position: 'fixed',
-            }}>
-                <Add/>
-                Add Comment
-            </Fab>
-            <Dialog id="editPostDialog" open={editPostDialogOpen} onClose={handleEditPostClickClose} fullWidth={true}
+            {isAuthenticated &&
+                <Fab onClick={handleClickAddComment} variant="extended" color="primary" aria-label="add" sx={{
+                    margin: 0,
+                    top: 'auto',
+                    right: 20,
+                    bottom: 20,
+                    left: 'auto',
+                    position: 'fixed',
+                }}>
+                    <Add/>
+                    Comment
+                </Fab>
+            }
+            <Dialog id="editPostDialog" open={editPostDialogOpen} onClose={handleClickEditPost} fullWidth={true}
                     fullScreen={fullScreen}>
                 <DialogTitle>Edit Post</DialogTitle>
                 <DialogContent>
@@ -431,11 +412,11 @@ function Post({onLogout}) {
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleEditPostClickClose}>Cancel</Button>
+                    <Button onClick={handleClickEditPost}>Cancel</Button>
                     <Button type="submit" onClick={handleEditPost}>Post</Button>
                 </DialogActions>
             </Dialog>
-            <Dialog id="deletePostDialog" open={deletePostDialogOpen} onClose={handleDeletePostClickClose}>
+            <Dialog id="deletePostDialog" open={deletePostDialogOpen} onClose={handleClickDeletePost}>
                 <DialogTitle>Are you sure you want to delete this post?</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
@@ -443,12 +424,12 @@ function Post({onLogout}) {
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleDeletePostClickClose} color="primary">Cancel</Button>
+                    <Button onClick={handleClickDeletePost} color="primary">Cancel</Button>
                     <Button type="submit" onClick={handleDeletePost} color="error">Delete</Button>
                 </DialogActions>
             </Dialog>
 
-            <Dialog id="addCommentDialog" open={addCommentDialogOpen} onClose={handleAddCommentClickClose}
+            <Dialog id="addCommentDialog" open={addCommentDialogOpen} onClose={handleClickAddComment}
                     fullWidth={true}
                     fullScreen={fullScreen}>
                 <DialogTitle>Add Comment</DialogTitle>
@@ -470,11 +451,11 @@ function Post({onLogout}) {
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleAddCommentClickClose}>Cancel</Button>
+                    <Button onClick={handleClickAddComment}>Cancel</Button>
                     <Button type="submit" onClick={handleAddComment}>Comment</Button>
                 </DialogActions>
             </Dialog>
-            <Dialog id="editCommentDialog" open={editCommentDialogOpen} onClose={handleEditCommentClickClose}
+            <Dialog id="editCommentDialog" open={editCommentDialogOpen} onClose={handleClickEditCommentClose}
                     fullWidth={true}
                     fullScreen={fullScreen}>
                 <DialogTitle>Edit Comment</DialogTitle>
@@ -496,11 +477,11 @@ function Post({onLogout}) {
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleEditCommentClickClose}>Cancel</Button>
+                    <Button onClick={handleClickEditCommentClose}>Cancel</Button>
                     <Button type="submit" onClick={handleEditComment}>Edit Comment</Button>
                 </DialogActions>
             </Dialog>
-            <Dialog id="deleteCommentDialog" open={deleteCommentDialogOpen} onClose={handleDeleteCommentClickClose}>
+            <Dialog id="deleteCommentDialog" open={deleteCommentDialogOpen} onClose={handleClickDeleteCommentClose}>
                 <DialogTitle>Are you sure you want to delete this comment?</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
@@ -508,7 +489,7 @@ function Post({onLogout}) {
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleDeleteCommentClickClose} color="primary">Cancel</Button>
+                    <Button onClick={handleClickDeleteCommentClose} color="primary">Cancel</Button>
                     <Button type="submit" onClick={handleDeleteComment} color="error">Delete</Button>
                 </DialogActions>
             </Dialog>

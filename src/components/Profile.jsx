@@ -9,7 +9,7 @@ import {
     Dialog,
     DialogActions,
     DialogContent,
-    DialogTitle,
+    DialogTitle, IconButton, InputAdornment,
     Paper,
     Table,
     TableBody,
@@ -26,13 +26,11 @@ import {useTheme} from "@mui/material/styles";
 import * as yup from "yup";
 import {useForm} from "react-hook-form";
 import {yupResolver} from "@hookform/resolvers/yup";
+import {Visibility, VisibilityOff} from "@mui/icons-material";
 
-function Profile({onLogout}) {
+function Profile({isAuthenticated,setIsAuthenticated}) {
     const [user, setUser] = useState({});
     const {username} = useParams()
-    const token = localStorage.getItem("jwt");
-    const decodedToken = jwtDecode(token);
-    const userFromToken = decodedToken.sub;
     const [isOwnProfile, setIsOwnProfile] = useState(false)
     const theme = useTheme();
     const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
@@ -41,6 +39,8 @@ function Profile({onLogout}) {
     const [areYouSurePasswordDialogOpen, setAreYouSurePasswordDialogOpen] = useState(false);
     const [passwordData, setPasswordData] = useState(null);
     const [error, setError] = useState(null);
+    const [showCurrentPassword,setShowCurrentPassword]=useState(false);
+    const [showNewPassword,setShowNewPassword]=useState(false);
 
 
     const editSchema = yup.object().shape({
@@ -66,19 +66,21 @@ function Profile({onLogout}) {
 
 
     useEffect(() => {
-        axios.get(`http://localhost:8080/api/users/${username}`,
-            {
-                headers: {Authorization: 'Bearer ' + token}
-            })
+        axios.get(`http://localhost:8080/api/users/${username}`)
             .then(response => {
                 setUser(response.data)
-                if (response.data.username === userFromToken) {
-                    setIsOwnProfile(true)
+                const token = localStorage.getItem("jwt");
+                if (token) {
+                    const decodedToken = jwtDecode(token);
+                    const userFromToken = decodedToken.sub;
+                    if (response.data.username === userFromToken) {
+                        setIsOwnProfile(true)
+                    }
                 }
             }).catch(error => {
             console.error(error);
         })
-    }, [token, userFromToken, username]);
+    }, [username]);
 
     useEffect(() => {
         if (user) {
@@ -89,14 +91,10 @@ function Profile({onLogout}) {
         }
     }, [user, editForm]);
 
-    const handleLogout = () => {
-        localStorage.removeItem('jwt')
-        onLogout(false);
-    }
 
     //edit profile
     const handleEditProfile = data => {
-
+        const token = localStorage.getItem("jwt");
         axios.put(`http://localhost:8080/api/users/${username}`, data, {
             headers: {
                 Authorization: 'Bearer ' + token
@@ -110,21 +108,17 @@ function Profile({onLogout}) {
 
     }
 
-    const handleEditProfileClickOpen = () => {
-        setEditProfileDialogOpen(true)
-    }
-    const handleEditProfileClickClose = () => {
-        setEditProfileDialogOpen(false)
-    }
+    const handleClickEditProfile = () => setEditProfileDialogOpen((state)=>!state)
 
     //change password
     const handleChangePassword = data => {
         setPasswordData(data);
-        handleChangePasswordClickClose();
+        handleCLickChangePassword();
         setAreYouSurePasswordDialogOpen(true);
     };
 
     const handleConfirmChangePassword = () => {
+        const token = localStorage.getItem("jwt");
         axios.put(`http://localhost:8080/api/users/${username}/password`, passwordData, {
             headers: {
                 Authorization: 'Bearer ' + token
@@ -133,33 +127,28 @@ function Profile({onLogout}) {
             setAreYouSurePasswordDialogOpen(false);
             window.location.reload();
         }).catch(error => {
-            handleAreYouSurePasswordClickClose()
+            handleClickAreYouSurePassword()
             setError(error.response?.data?.message || 'Password change failed')
         });
     };
 
-    const handleChangePasswordClickOpen = () => {
-        setChangePasswordDialogOpen(true)
-    }
-    const handleChangePasswordClickClose = () => {
-        setChangePasswordDialogOpen(false)
-    }
+    const handleCLickChangePassword=()=> setChangePasswordDialogOpen((state)=>!state)
+    const handleClickAreYouSurePassword = () => setAreYouSurePasswordDialogOpen((state)=>!state)
+    const handleClickShowCurrentPassword = () => setShowCurrentPassword((show) => !show);
+    const handleClickShowNewPassword = () => setShowNewPassword((show) => !show);
 
-    const handleAreYouSurePasswordClickClose = () => {
-        setAreYouSurePasswordDialogOpen(false)
-    }
 
     return (<Fragment>
-        <TopAppBar handleLogout={handleLogout}/>
+        <TopAppBar isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated}/>
         <Container sx={{marginTop: 3}}>
             <Typography variant="h4" gutterBottom sx={{wordBreak: "break-word"}}>
                 {user.username}
             </Typography>
             {isOwnProfile && <Fragment>
-                <Button color="primary" onClick={handleEditProfileClickOpen}>
+                <Button color="primary" onClick={handleClickEditProfile}>
                     Edit Profile
                 </Button>
-                <Button color="error" onClick={handleChangePasswordClickOpen}>
+                <Button color="error" onClick={handleCLickChangePassword}>
                     Change Password
                 </Button>
             </Fragment>
@@ -187,7 +176,7 @@ function Profile({onLogout}) {
                 </Table>
             </TableContainer>
         </Container>
-        <Dialog id="editPofileDialog" open={editProfileDialogOpen} onClose={handleEditProfileClickClose}
+        <Dialog id="editPofileDialog" open={editProfileDialogOpen} onClose={handleClickEditProfile}
                 fullWidth={true}
                 fullScreen={fullScreen}>
             <DialogTitle>Edit</DialogTitle>
@@ -244,13 +233,13 @@ function Profile({onLogout}) {
 
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleEditProfileClickClose}>Cancel</Button>
+                    <Button onClick={handleClickEditProfile}>Cancel</Button>
                     <Button type="submit">Edit</Button>
                 </DialogActions>
             </form>
         </Dialog>
 
-        <Dialog id="changePasswordDialog" open={changePasswordDialogOpen} onClose={handleChangePasswordClickClose}
+        <Dialog id="changePasswordDialog" open={changePasswordDialogOpen} onClose={handleCLickChangePassword}
                 fullWidth={true}
                 fullScreen={fullScreen}>
             <DialogTitle>Edit Comment</DialogTitle>
@@ -261,29 +250,47 @@ function Profile({onLogout}) {
                         margin="normal"
                         variant="standard"
                         label="Current Password"
-                        type="password"
+                        type={showCurrentPassword ? 'text' : 'password'}
                         fullWidth
                         {...passwordForm.register('currentPassword')}
                         error={!!passwordForm.formState.errors.currentPassword}
                         helperText={passwordForm.formState.errors.currentPassword?.message}
+                        InputProps={{
+                            endAdornment: (
+                                <InputAdornment position="end">
+                                    <IconButton onClick={handleClickShowCurrentPassword}>
+                                        {showCurrentPassword ? <VisibilityOff/> : <Visibility/>}
+                                    </IconButton>
+                                </InputAdornment>
+                            )
+                        }}
                     />
                     <TextField
                         id="newPassword"
                         margin="normal"
                         variant="standard"
                         label="New Password"
-                        type="password"
+                        type={showNewPassword ? 'text' : 'password'}
                         fullWidth
                         {...passwordForm.register('newPassword')}
                         error={!!passwordForm.formState.errors.newPassword}
                         helperText={passwordForm.formState.errors.newPassword?.message}
+                        InputProps={{
+                            endAdornment: (
+                                <InputAdornment position="end">
+                                    <IconButton onClick={handleClickShowNewPassword}>
+                                        {showNewPassword ? <VisibilityOff/> : <Visibility/>}
+                                    </IconButton>
+                                </InputAdornment>
+                            )
+                        }}
                     />
                     <TextField
                         id="confirmNewPassword"
                         margin="normal"
                         variant="standard"
                         label="Confirm Password"
-                        type="password"
+                        type={'password'}
                         fullWidth
                         {...passwordForm.register('confirmNewPassword')}
                         error={!!passwordForm.formState.errors.confirmNewPassword}
@@ -291,7 +298,7 @@ function Profile({onLogout}) {
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleChangePasswordClickClose}>Cancel</Button>
+                    <Button onClick={handleCLickChangePassword}>Cancel</Button>
                     <Button type="submit" color="error">Change
                         Password</Button>
                 </DialogActions>
@@ -299,13 +306,13 @@ function Profile({onLogout}) {
         </Dialog>
 
         <Dialog id="areYouSurePasswordDialog" open={areYouSurePasswordDialogOpen}
-                onClose={handleAreYouSurePasswordClickClose}
+                onClose={handleClickAreYouSurePassword}
                 fullWidth={true}
                 fullScreen={fullScreen}>
             <DialogTitle>Are you sure?</DialogTitle>
             <DialogContent>Are you sure that you want to change your password?</DialogContent>
             <DialogActions>
-                <Button onClick={handleAreYouSurePasswordClickClose}>Cancel</Button>
+                <Button onClick={handleClickAreYouSurePassword}>Cancel</Button>
                 <Button type="submit" color="error" onClick={handleConfirmChangePassword}>Change Password</Button>
             </DialogActions>
         </Dialog>
