@@ -27,6 +27,8 @@ import * as yup from "yup";
 import {useForm} from "react-hook-form";
 import {yupResolver} from "@hookform/resolvers/yup";
 import {Visibility, VisibilityOff} from "@mui/icons-material";
+import {adjustBirthDateToUserTimezone} from "../utils/DateUtils.js";
+import endpoints from "../utils/Endpoints.js";
 
 function Profile({isAuthenticated,setIsAuthenticated}) {
     const [user, setUser] = useState({});
@@ -66,7 +68,7 @@ function Profile({isAuthenticated,setIsAuthenticated}) {
 
 
     useEffect(() => {
-        axios.get(`http://localhost:8080/api/users/${username}`)
+        axios.get(endpoints.users.getByUsername(username))
             .then(response => {
                 setUser(response.data)
                 const token = localStorage.getItem("jwt");
@@ -87,7 +89,8 @@ function Profile({isAuthenticated,setIsAuthenticated}) {
             editForm.setValue("email", user.email);
             editForm.setValue("firstName", user.firstName);
             editForm.setValue("lastName", user.lastName);
-            editForm.setValue("birthDate", user.birthDate ? user.birthDate.split('T')[0] : '');
+            editForm.setValue("birthDate", user.birthDate ?
+                adjustBirthDateToUserTimezone(user.birthDate).split('-').reverse().join('-') : '');
         }
     }, [user, editForm]);
 
@@ -95,7 +98,7 @@ function Profile({isAuthenticated,setIsAuthenticated}) {
     //edit profile
     const handleEditProfile = data => {
         const token = localStorage.getItem("jwt");
-        axios.put(`http://localhost:8080/api/users/${username}`, data, {
+        axios.put(endpoints.users.editByUsername(username), data, {
             headers: {
                 Authorization: 'Bearer ' + token
             }
@@ -119,7 +122,7 @@ function Profile({isAuthenticated,setIsAuthenticated}) {
 
     const handleConfirmChangePassword = () => {
         const token = localStorage.getItem("jwt");
-        axios.put(`http://localhost:8080/api/users/${username}/password`, passwordData, {
+        axios.put(endpoints.users.changePasswordByUsername(username), passwordData, {
             headers: {
                 Authorization: 'Bearer ' + token
             }
@@ -170,7 +173,7 @@ function Profile({isAuthenticated,setIsAuthenticated}) {
                             <TableCell>{user.email}</TableCell>
                             <TableCell align="left">{user.firstName}</TableCell>
                             <TableCell align="left">{user.lastName}</TableCell>
-                            <TableCell align="left">{user.birthDate}</TableCell>
+                            <TableCell align="left">{adjustBirthDateToUserTimezone(user.birthDate)}</TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>

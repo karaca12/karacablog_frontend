@@ -25,6 +25,8 @@ import TopAppBar from "./TopAppBar.jsx";
 import {Add} from "@mui/icons-material";
 import {jwtDecode} from "jwt-decode";
 import {useTheme} from '@mui/material/styles';
+import {adjustPostOrCommentDateToUserTimezone} from "../utils/DateUtils.js";
+import endpoints from "../utils/Endpoints.js";
 
 function Home({isAuthenticated, setIsAuthenticated}) {
     const [posts, setPosts] = useState([]);
@@ -42,7 +44,7 @@ function Home({isAuthenticated, setIsAuthenticated}) {
     const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
     useEffect(() => {
-        axios.get(`http://localhost:8080/api/posts?page=${page - 1}&size=${size}`)
+        axios.get(endpoints.posts.getAll(page,size))
             .then(response => {
                 setPosts(response.data.posts);
                 setTotalPages(response.data.totalPages);
@@ -51,6 +53,7 @@ function Home({isAuthenticated, setIsAuthenticated}) {
         })
 
     }, [page, size])
+
 
     const handlePageChange = (event, value) => {
         setPage(value);
@@ -83,7 +86,7 @@ function Home({isAuthenticated, setIsAuthenticated}) {
                 tags: tags
             };
 
-            axios.post('http://localhost:8080/api/posts', newPost, {
+            axios.post(endpoints.posts.create, newPost, {
                 headers: {
                     Authorization: 'Bearer ' + token
                 }
@@ -133,19 +136,19 @@ function Home({isAuthenticated, setIsAuthenticated}) {
                                 <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
                                     <ListItemButton onClick={() => handleClickPost(post.uniqueNum)}>
                                         <ListItemText primary={
-                                            <Typography variant="h6" color="textPrimary" sx={{wordBreak: "break-word"}}>
+                                            <Typography variant="h6" color="textPrimary" sx={{wordBreak: "break-word",whiteSpace: "pre-wrap"}}>
                                                 {post.title}
                                             </Typography>}
                                                       secondary={
                                                           <Typography variant="body2" color="textPrimary"
-                                                                      sx={{wordBreak: "break-word"}}>
+                                                                      sx={{wordBreak: "break-word",whiteSpace: "pre-wrap"}}>
                                                               {post.content.length > 1000 ? post.content.substring(0, 1000) + "..." : post.content}
                                                           </Typography>
                                                       }/>
                                     </ListItemButton>
                                     <Button variant="caption" color="textPrimary" ml={2}
                                             onClick={() => handleAuthorClick(post.author)}>
-                                        Written by {post.author} at {post.createdAt}
+                                        Written by {post.author} at {adjustPostOrCommentDateToUserTimezone(post.createdAt)}
                                     </Button>
                                     <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
                                         {post.tags.map((tag) => (

@@ -15,6 +15,7 @@ import {
     TextField
 } from "@mui/material";
 import {Visibility, VisibilityOff} from "@mui/icons-material";
+import endpoints from "../utils/Endpoints.js";
 
 function Auth({open, setOpen}) {
     const [isRegistering, setIsRegistering] = useState(false);
@@ -48,7 +49,7 @@ function Auth({open, setOpen}) {
     }
 
     const handleLoginSubmit = data => {
-        axios.post('http://localhost:8080/api/auth/login', data)
+        axios.post(endpoints.auth.login, data)
             .then(response => {
                 localStorage.setItem('jwt', response.data)
                 setOpen(false)
@@ -60,7 +61,7 @@ function Auth({open, setOpen}) {
     }
 
     const handleRegisterSubmit = data => {
-        axios.post('http://localhost:8080/api/auth/register', data)
+        axios.post(endpoints.auth.register, data)
             .then(response => {
                 localStorage.setItem('jwt', response.data)
                 setOpen(false)

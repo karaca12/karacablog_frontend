@@ -25,6 +25,8 @@ import TopAppBar from "./TopAppBar.jsx";
 import {Add} from "@mui/icons-material";
 import {jwtDecode} from "jwt-decode";
 import {useTheme} from "@mui/material/styles";
+import {adjustPostOrCommentDateToUserTimezone} from "../utils/DateUtils.js";
+import endpoints from "../utils/Endpoints.js";
 
 function Post({isAuthenticated, setIsAuthenticated}) {
     const [post, setPost] = useState([]);
@@ -53,7 +55,7 @@ function Post({isAuthenticated, setIsAuthenticated}) {
     const [editedCommentContent, setEditedCommentContent] = useState('')
 
     useEffect(() => {
-        axios.get(`http://localhost:8080/api/posts/${uniqueNum}`)
+        axios.get(endpoints.posts.getByUniqueNum(uniqueNum))
             .then(response => {
                 const token = localStorage.getItem('jwt');
                 if (token) {
@@ -74,7 +76,7 @@ function Post({isAuthenticated, setIsAuthenticated}) {
     }, [uniqueNum, page]);
 
     const fetchComments = () => {
-        axios.get(`http://localhost:8080/api/comments/post/${uniqueNum}?page=${page - 1}&size=${size}`)
+        axios.get(endpoints.comments.getAllByPostUniqueNum(uniqueNum,page,size))
             .then(response => {
                 setComments(response.data.comments)
                 setTotalPages(response.data.totalPages)
@@ -120,7 +122,7 @@ function Post({isAuthenticated, setIsAuthenticated}) {
                 content: newPostContent,
                 tags: newTags
             };
-            axios.put(`http://localhost:8080/api/posts/${uniqueNum}`, newPost, {
+            axios.put(endpoints.posts.editByUniqueNum(uniqueNum), newPost, {
                 headers: {
                     Authorization: 'Bearer ' + token
                 }
@@ -149,7 +151,7 @@ function Post({isAuthenticated, setIsAuthenticated}) {
     //delete post
     const handleDeletePost = () => {
         const token = localStorage.getItem('jwt');
-        axios.delete(`http://localhost:8080/api/posts/${uniqueNum}`, {
+        axios.delete(endpoints.posts.deleteByUniqueNum(uniqueNum), {
             headers: {
                 Authorization: 'Bearer ' + token
             }
@@ -161,6 +163,7 @@ function Post({isAuthenticated, setIsAuthenticated}) {
     }
 
     const handleClickDeletePost = () => setDeletePostDialogOpen((state)=>!state)
+
     //add comment
     const handleAddComment = () => {
         const token = localStorage.getItem('jwt');
@@ -178,8 +181,7 @@ function Post({isAuthenticated, setIsAuthenticated}) {
                 content: newCommentContent,
                 author: user
             }
-
-            axios.post(`http://localhost:8080/api/comments/post/${uniqueNum}`, newComment, {
+            axios.post(endpoints.comments.createByPostUniqueNum(uniqueNum), newComment, {
                 headers: {
                     Authorization: 'Bearer ' + token
                 }
@@ -199,7 +201,7 @@ function Post({isAuthenticated, setIsAuthenticated}) {
     const handleDeleteComment = () => {
         const token = localStorage.getItem('jwt');
 
-        axios.delete(`http://localhost:8080/api/comments/${commentUniqueNum}`, {
+        axios.delete(endpoints.comments.deleteByCommentUniqueNum(commentUniqueNum), {
             headers: {
                 Authorization: 'Bearer ' + token
             }
@@ -237,7 +239,7 @@ function Post({isAuthenticated, setIsAuthenticated}) {
                 content: editedCommentContent,
             }
 
-            axios.put(`http://localhost:8080/api/comments/${commentUniqueNum}`, newComment, {
+            axios.put(endpoints.comments.editByCommentUniqueNum(commentUniqueNum), newComment, {
                 headers: {
                     Authorization: 'Bearer ' + token
                 }
@@ -280,11 +282,11 @@ function Post({isAuthenticated, setIsAuthenticated}) {
                     </Fragment>
                 }
                 <Divider/>
-                <Typography variant="body1" gutterBottom mt={2} sx={{wordBreak: "break-word"}}>
+                <Typography variant="body1" gutterBottom mt={2} sx={{wordBreak: "break-word",whiteSpace: "pre-wrap"}}>
                     {post.content}
                 </Typography>
                 <Button variant="caption" color="textPrimary" ml={2} onClick={() => handleAuthorClick(post.author)}>
-                    Written by {post.author} at {post.createdAt}
+                    Written by {post.author} at {adjustPostOrCommentDateToUserTimezone(post.createdAt)}
                 </Button>
                 <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
                     {post.tags && post.tags.map((tag) => (
@@ -312,12 +314,12 @@ function Post({isAuthenticated, setIsAuthenticated}) {
                                     <ListItem key={comment.uniqueNum} alignItems="flex-start">
                                         <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
                                             <Typography variant="body1" gutterBottom ml={2} mt={1}
-                                                        sx={{wordBreak: "break-word"}}>
+                                                        sx={{wordBreak: "break-word",whiteSpace: "pre-wrap"}}>
                                                 {comment.content}
                                             </Typography>
                                             <Button variant="caption" color="textPrimary"
                                                     onClick={() => handleAuthorClick(comment.author)}>
-                                                Written by {comment.author} at {comment.createdAt}
+                                                Written by {comment.author} at {adjustPostOrCommentDateToUserTimezone(comment.createdAt)}
                                             </Button>
 
                                             {comment.author === user &&
