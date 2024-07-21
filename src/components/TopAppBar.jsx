@@ -18,6 +18,8 @@ import {jwtDecode} from "jwt-decode";
 import {Fragment, useState} from "react";
 import Auth from "./Auth.jsx";
 
+
+//todo: got a lot to do this is a mess
 function TopAppBar({isAuthenticated, setIsAuthenticated}) {
     const navigate = useNavigate();
     const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
@@ -58,22 +60,24 @@ function TopAppBar({isAuthenticated, setIsAuthenticated}) {
                     <Button variant="h6" component="div" onClick={handleClickHomePage}>
                         Karacablog
                     </Button>
-                    <TextField
-                        label="Search"
-                        variant="filled"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        InputProps={{
-                            endAdornment: (
-                                <InputAdornment position="end">
-                                    <IconButton onClick={handleSearch}>
-                                        <Search/>
-                                    </IconButton>
-                                </InputAdornment>
-                            )
-                        }}
-                        sx={{backgroundColor: 'white'}}
-                    />
+                    <form onSubmit={handleSearch}>
+                        <TextField
+                            label="Search"
+                            variant="filled"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton onClick={handleSearch}>
+                                            <Search/>
+                                        </IconButton>
+                                    </InputAdornment>
+                                )
+                            }}
+                            sx={{backgroundColor: 'white'}}
+                        />
+                    </form>
                     {isAuthenticated ? (
                         <Fragment>
                             <IconButton onClick={handleClickProfile} size="large">

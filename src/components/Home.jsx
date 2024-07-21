@@ -63,6 +63,10 @@ function Home({isAuthenticated, setIsAuthenticated}) {
         navigate(`/post/${uniqueNum}`);
     };
 
+    const handleAuthorClick = (author) => {
+        navigate(`/profile/${author}`)
+    }
+
     const handleClickCreatePost = () => setCreatePostDialogOpen((state)=>!state)
     const handleCreatePost = () => {
         const token = localStorage.getItem("jwt");
@@ -117,9 +121,7 @@ function Home({isAuthenticated, setIsAuthenticated}) {
         setTags(tags.filter(tag => tag !== tagToRemove));
     };
 
-    const handleAuthorClick = (author) => {
-        navigate(`/profile/${author}`)
-    }
+
 
     return (
         <Fragment>

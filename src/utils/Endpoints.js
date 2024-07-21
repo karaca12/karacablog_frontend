@@ -10,7 +10,8 @@ const endpoints = {
         create: `${BASE_URL}/posts`,
         getByUniqueNum: (uniqueNum) => `${BASE_URL}/posts/${uniqueNum}`,
         editByUniqueNum: (uniqueNum) => `${BASE_URL}/posts/${uniqueNum}`,
-        deleteByUniqueNum: (uniqueNum) => `${BASE_URL}/posts/${uniqueNum}`
+        deleteByUniqueNum: (uniqueNum) => `${BASE_URL}/posts/${uniqueNum}`,
+        searchByKeyword: (keyword,page,size) => `${BASE_URL}/posts/search/${keyword}?page=${page - 1}&size=${size}`,
     },
     comments: {
         getAllByPostUniqueNum: (postUniqueNum, page, size) => `${BASE_URL}/comments/post/${postUniqueNum}?page=${page - 1}&size=${size}`,
@@ -22,6 +23,10 @@ const endpoints = {
         getByUsername: (username)=>`${BASE_URL}/users/${username}`,
         editByUsername: (username)=>`${BASE_URL}/users/${username}`,
         changePasswordByUsername: (username)=>`${BASE_URL}/users/${username}/password`,
+        searchByKeyword: (keyword,page,size)=>`${BASE_URL}/users/search/${keyword}?page=${page - 1}&size=${size}`,
+    },
+    tags: {
+        searchByKeyword: (keyword,page,size) => `${BASE_URL}/tags/search/${keyword}?page=${page - 1}&size=${size}`,
     }
 };
 
