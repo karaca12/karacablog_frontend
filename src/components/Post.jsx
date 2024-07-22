@@ -95,6 +95,10 @@ function Post({isAuthenticated, setIsAuthenticated}) {
         navigate(`/profile/${author}`)
     }
 
+    const handleSearchTag = (keyword) => {
+        navigate(`/search/${keyword}`, { state: { searchType: 'tags' } })
+    }
+
     const reloadToPageOne = () => {
         if (page === 1) {
             window.location.reload();
@@ -290,8 +294,7 @@ function Post({isAuthenticated, setIsAuthenticated}) {
                 </Button>
                 <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
                     {post.tags && post.tags.map((tag) => (
-                        //todo:Add onClick search for tags
-                        <Button onClick={() => console.log('blabla')} key={tag}
+                        <Button onClick={()=>handleSearchTag(tag)} key={tag}
                                 sx={{margin: 0.5, padding: 1, wordBreak: "break-word"}}>
                             {tag}
                         </Button>

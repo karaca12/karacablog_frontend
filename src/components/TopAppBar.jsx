@@ -19,7 +19,6 @@ import {Fragment, useState} from "react";
 import Auth from "./Auth.jsx";
 
 
-//todo: got a lot to do this is a mess
 function TopAppBar({isAuthenticated, setIsAuthenticated}) {
     const navigate = useNavigate();
     const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);

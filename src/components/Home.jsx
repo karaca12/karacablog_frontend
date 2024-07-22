@@ -67,6 +67,10 @@ function Home({isAuthenticated, setIsAuthenticated}) {
         navigate(`/profile/${author}`)
     }
 
+    const handleSearchTag = (keyword) => {
+        navigate(`/search/${keyword}`, { state: { searchType: 'tags' } })
+    }
+
     const handleClickCreatePost = () => setCreatePostDialogOpen((state)=>!state)
     const handleCreatePost = () => {
         const token = localStorage.getItem("jwt");
@@ -123,6 +127,8 @@ function Home({isAuthenticated, setIsAuthenticated}) {
 
 
 
+
+
     return (
         <Fragment>
             <TopAppBar isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated}/>
@@ -154,8 +160,7 @@ function Home({isAuthenticated, setIsAuthenticated}) {
                                     </Button>
                                     <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
                                         {post.tags.map((tag) => (
-                                            //todo:Add onClick search for tags
-                                            <Button onClick={() => console.log('blabla')} key={tag}
+                                            <Button onClick={()=>handleSearchTag(tag)} key={tag}
                                                     sx={{margin: 0.5, padding: 1, wordBreak: "break-word"}}>
                                                 {tag}
                                             </Button>
