@@ -7,7 +7,7 @@ import {jwtDecode} from "jwt-decode";
 import Search from "./components/Search.jsx";
 
 
-function DefaultRoutes() {
+export default function DefaultRoutes() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
@@ -39,5 +39,3 @@ function DefaultRoutes() {
             <Route path="*" element={<Navigate to={"/home"}/>}/>
         </Routes>)
 }
-
-export default DefaultRoutes;

@@ -13,7 +13,7 @@ const endpoints = {
         deleteByUniqueNum: (uniqueNum) => `${BASE_URL}/posts/${uniqueNum}`,
         searchByKeyword: (keyword,page,size) => `${BASE_URL}/posts/search/${keyword}?page=${page - 1}&size=${size}`,
         searchByTag: (keyword,page,size) => `${BASE_URL}/posts/search/tag/${keyword}?page=${page - 1}&size=${size}`,
-
+        getByUsername: (username,page,size)=>`${BASE_URL}/posts/user/${username}?page=${page - 1}&size=${size}`,
     },
     comments: {
         getAllByPostUniqueNum: (postUniqueNum, page, size) => `${BASE_URL}/comments/post/${postUniqueNum}?page=${page - 1}&size=${size}`,

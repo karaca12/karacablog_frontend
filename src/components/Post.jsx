@@ -28,7 +28,7 @@ import {useTheme} from "@mui/material/styles";
 import {adjustPostOrCommentDateToUserTimezone} from "../utils/DateUtils.js";
 import endpoints from "../utils/Endpoints.js";
 
-function Post({isAuthenticated, setIsAuthenticated}) {
+export default function Post({isAuthenticated, setIsAuthenticated}) {
     const [post, setPost] = useState([]);
     const [comments, setComments] = useState([]);
     const [page, setPage] = useState(1);
@@ -501,5 +501,3 @@ function Post({isAuthenticated, setIsAuthenticated}) {
         </Fragment>
     )
 }
-
-export default Post;

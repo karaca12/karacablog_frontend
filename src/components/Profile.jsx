@@ -1,15 +1,15 @@
 import {Fragment, useEffect, useState} from "react";
 import axios from "axios";
-import {useParams} from "react-router-dom";
+import {useNavigate, useParams} from "react-router-dom";
 import TopAppBar from "./TopAppBar.jsx";
 import {
-    Alert,
-    Button,
+    Alert, Box,
+    Button, Chip,
     Container,
     Dialog,
     DialogActions,
     DialogContent,
-    DialogTitle, IconButton, InputAdornment,
+    DialogTitle, Divider, IconButton, InputAdornment, List, ListItem, ListItemButton, ListItemText, Pagination,
     Paper,
     Table,
     TableBody,
@@ -30,7 +30,7 @@ import {Visibility, VisibilityOff} from "@mui/icons-material";
 import {adjustBirthDateToUserTimezone} from "../utils/DateUtils.js";
 import endpoints from "../utils/Endpoints.js";
 
-function Profile({isAuthenticated,setIsAuthenticated}) {
+export default function Profile({isAuthenticated,setIsAuthenticated}) {
     const [user, setUser] = useState({});
     const {username} = useParams()
     const [isOwnProfile, setIsOwnProfile] = useState(false)
@@ -43,6 +43,13 @@ function Profile({isAuthenticated,setIsAuthenticated}) {
     const [error, setError] = useState(null);
     const [showCurrentPassword,setShowCurrentPassword]=useState(false);
     const [showNewPassword,setShowNewPassword]=useState(false);
+    const [displayPosts,setDisplayPosts]=useState(true)
+    const [posts,setPosts]=useState([])
+    const [page, setPage] = useState(1);
+    const [size] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
+    const navigate = useNavigate();
+
 
 
     const editSchema = yup.object().shape({
@@ -79,10 +86,34 @@ function Profile({isAuthenticated,setIsAuthenticated}) {
                         setIsOwnProfile(true)
                     }
                 }
+                fetchPosts();
             }).catch(error => {
             console.error(error);
         })
-    }, [username]);
+    }, [username,page]);
+
+    const fetchPosts = () => {
+        axios.get(endpoints.posts.getByUsername(username,page,size))
+            .then(response => {
+                setPosts(response.data.posts)
+                setTotalPages(response.data.totalPages)
+            }).catch(error => {
+            console.error(error);
+        })
+    }
+
+    const handleDisplayPosts=()=>setDisplayPosts((state)=>!state)
+    const handlePageChange = (event, value) => {
+        setPage(value);
+    };
+
+    const handleClickPost = (uniqueNum) => {
+        navigate(`/post/${uniqueNum}`);
+    };
+
+    const handleSearchTag = (keyword) => {
+        navigate(`/search/${keyword}`, { state: { searchType: 'tags' } })
+    }
 
     useEffect(() => {
         if (user) {
@@ -140,6 +171,16 @@ function Profile({isAuthenticated,setIsAuthenticated}) {
     const handleClickShowCurrentPassword = () => setShowCurrentPassword((show) => !show);
     const handleClickShowNewPassword = () => setShowNewPassword((show) => !show);
 
+    const truncateContent = (content,maxLength) => {
+        const newlineIndex = content.indexOf('\n');
+
+        if (newlineIndex !== -1 && newlineIndex < maxLength) {
+            return content.substring(0, newlineIndex)+" ...";
+        }
+
+        return content.length > maxLength ? content.substring(0, maxLength) + " ..." : content;
+    };
+
 
     return (<Fragment>
         <TopAppBar isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated}/>
@@ -178,6 +219,50 @@ function Profile({isAuthenticated,setIsAuthenticated}) {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <Divider sx={{marginTop: 2}}>
+                <Chip label="POSTS" onClick={handleDisplayPosts} color="primary"/>
+            </Divider>
+            {displayPosts &&
+                <Fragment>
+                    <List>
+                        {posts.map((post) => (
+                            <Fragment key={post.uniqueNum}>
+                                <ListItem alignItems="flex-start">
+                                    <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
+                                        <ListItemButton onClick={() => handleClickPost(post.uniqueNum)}>
+                                            <ListItemText
+                                                primary={
+                                                    <Typography variant="h6" color="textPrimary"
+                                                                sx={{wordBreak: "break-word", whiteSpace: "pre-wrap"}}>
+                                                        {post.title}
+                                                    </Typography>
+                                                }
+                                                secondary={
+                                                    <Typography variant="body2" color="textPrimary"
+                                                                sx={{wordBreak: "break-word", whiteSpace: "pre-wrap"}}>
+                                                        {truncateContent(post.content,500)}
+                                                    </Typography>
+                                                }
+                                            />
+                                        </ListItemButton>
+                                        <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
+                                            {post.tags.map((tag) => (
+                                                <Button onClick={()=>handleSearchTag(tag)} key={tag}
+                                                        sx={{margin: 0.5, padding: 1, wordBreak: "break-word"}}>
+                                                    {tag}
+                                                </Button>
+                                            ))}
+                                        </Box>
+                                    </Paper>
+                                </ListItem>
+                            </Fragment>
+                        ))}
+                    </List>
+                    <Box display="flex" justifyContent="space-between" my={2}>
+                        <Pagination count={totalPages} page={page} onChange={handlePageChange} color="primary"/>
+                    </Box>
+                </Fragment>
+            }
         </Container>
         <Dialog id="editPofileDialog" open={editProfileDialogOpen} onClose={handleClickEditProfile}
                 fullWidth={true}
@@ -324,4 +409,3 @@ function Profile({isAuthenticated,setIsAuthenticated}) {
     </Fragment>)
 }
 
-export default Profile;

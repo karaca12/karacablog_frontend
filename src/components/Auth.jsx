@@ -17,7 +17,7 @@ import {
 import {Visibility, VisibilityOff} from "@mui/icons-material";
 import endpoints from "../utils/Endpoints.js";
 
-function Auth({open, setOpen}) {
+export default function Auth({open, setOpen}) {
     const [isRegistering, setIsRegistering] = useState(false);
     const [error, setError] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
@@ -211,4 +211,3 @@ function Auth({open, setOpen}) {
     )
 }
 
-export default Auth;

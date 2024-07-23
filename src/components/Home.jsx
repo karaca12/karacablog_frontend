@@ -2,8 +2,10 @@ import {Fragment, useEffect, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import axios from "axios";
 import {
+    Alert,
     Box,
     Button,
+    CircularProgress,
     Container,
     Dialog,
     DialogActions,
@@ -17,6 +19,7 @@ import {
     ListItemText,
     Pagination,
     Paper,
+    Snackbar,
     TextField,
     Typography,
     useMediaQuery
@@ -28,7 +31,7 @@ import {useTheme} from '@mui/material/styles';
 import {adjustPostOrCommentDateToUserTimezone} from "../utils/DateUtils.js";
 import endpoints from "../utils/Endpoints.js";
 
-function Home({isAuthenticated, setIsAuthenticated}) {
+export default function Home({isAuthenticated, setIsAuthenticated}) {
     const [posts, setPosts] = useState([]);
     const [page, setPage] = useState(1);
     const [size] = useState(10);
@@ -39,17 +42,26 @@ function Home({isAuthenticated, setIsAuthenticated}) {
     const [newPostContent, setNewPostContent] = useState('');
     const [newTag, setNewTag] = useState('');
     const [tags, setTags] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [errors, setErrors] = useState({});
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState('info');
     const theme = useTheme();
     const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
     useEffect(() => {
-        axios.get(endpoints.posts.getAll(page,size))
+        setLoading(true);
+        axios.get(endpoints.posts.getAll(page, size))
             .then(response => {
                 setPosts(response.data.posts);
                 setTotalPages(response.data.totalPages);
+                setLoading(false);
             }).catch(error => {
             console.error(error);
+            setError('Failed to load posts. Please try again later.');
+            setLoading(false);
         })
 
     }, [page, size])
@@ -68,10 +80,10 @@ function Home({isAuthenticated, setIsAuthenticated}) {
     }
 
     const handleSearchTag = (keyword) => {
-        navigate(`/search/${keyword}`, { state: { searchType: 'tags' } })
+        navigate(`/search/${keyword}`, {state: {searchType: 'tags'}})
     }
 
-    const handleClickCreatePost = () => setCreatePostDialogOpen((state)=>!state)
+    const handleClickCreatePost = () => setCreatePostDialogOpen((state) => !state)
     const handleCreatePost = () => {
         const token = localStorage.getItem("jwt");
         const decodedToken = jwtDecode(token);
@@ -94,22 +106,22 @@ function Home({isAuthenticated, setIsAuthenticated}) {
                 tags: tags
             };
 
+            setCreatePostDialogOpen(false);
+            setSnackbarMessage('Posting');
+            setSnackbarSeverity('info');
+            setSnackbarOpen(true);
+
             axios.post(endpoints.posts.create, newPost, {
                 headers: {
                     Authorization: 'Bearer ' + token
                 }
-            }).then(() => {
-                setCreatePostDialogOpen(false);
-                setNewPostTitle('');
-                setNewPostContent('');
-                setTags([]);
-                if (page === 1) {
-                    window.location.reload();
-                } else {
-                    setPage(1);
-                }
+            }).then(response => {
+                navigate(`/post/${response.data.uniqueNum}`);
             }).catch(error => {
                 console.error(error);
+                setSnackbarMessage('Failed to post. Please try again later.');
+                setSnackbarSeverity('error');
+                setSnackbarOpen(true);
             });
         }
     }
@@ -126,8 +138,17 @@ function Home({isAuthenticated, setIsAuthenticated}) {
     };
 
 
+    const truncateContent = (content, maxLength) => {
+        const newlineIndex = content.indexOf('\n');
 
+        if (newlineIndex !== -1 && newlineIndex < maxLength) {
+            return content.substring(0, newlineIndex) + " ...";
+        }
 
+        return content.length > maxLength ? content.substring(0, maxLength) + " ..." : content;
+    };
+
+    const handleSnackbarClose = () => setSnackbarOpen(false);
 
     return (
         <Fragment>
@@ -137,45 +158,60 @@ function Home({isAuthenticated, setIsAuthenticated}) {
                     Posts
                 </Typography>
                 <Divider/>
-                <List>
-                    {posts.map((post) => (
-                        <Fragment key={post.uniqueNum}>
-                            <ListItem alignItems="flex-start">
-                                <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
-                                    <ListItemButton onClick={() => handleClickPost(post.uniqueNum)}>
-                                        <ListItemText primary={
-                                            <Typography variant="h6" color="textPrimary" sx={{wordBreak: "break-word",whiteSpace: "pre-wrap"}}>
-                                                {post.title}
-                                            </Typography>}
-                                                      secondary={
-                                                          <Typography variant="body2" color="textPrimary"
-                                                                      sx={{wordBreak: "break-word",whiteSpace: "pre-wrap"}}>
-                                                              {post.content.length > 1000 ? post.content.substring(0, 1000) + "..." : post.content}
-                                                          </Typography>
-                                                      }/>
-                                    </ListItemButton>
-                                    <Button variant="caption" color="textPrimary" ml={2}
-                                            onClick={() => handleAuthorClick(post.author)}>
-                                        Written by {post.author} at {adjustPostOrCommentDateToUserTimezone(post.createdAt)}
-                                    </Button>
-                                    <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
-                                        {post.tags.map((tag) => (
-                                            <Button onClick={()=>handleSearchTag(tag)} key={tag}
-                                                    sx={{margin: 0.5, padding: 1, wordBreak: "break-word"}}>
-                                                {tag}
-                                            </Button>
-                                        ))}
-                                    </Box>
-                                </Paper>
-                            </ListItem>
-                        </Fragment>
-                    ))}
-                </List>
-                <Box display="flex" justifyContent="space-between" my={2}>
-                    <Pagination count={totalPages} page={page} onChange={handlePageChange} color="primary"/>
-                </Box>
+                {loading ? (
+                    <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+                        <CircularProgress/>
+                    </Box>
+                ) : error ? (
+                    <Alert severity="error">{error}</Alert>
+                ) : (
+                    <List>
+                        {posts.map((post) => (
+                            <Fragment key={post.uniqueNum}>
+                                <ListItem alignItems="flex-start">
+                                    <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
+                                        <ListItemButton onClick={() => handleClickPost(post.uniqueNum)}>
+                                            <ListItemText primary={
+                                                <Typography variant="h6" color="textPrimary"
+                                                            sx={{wordBreak: "break-word", whiteSpace: "pre-wrap"}}>
+                                                    {post.title}
+                                                </Typography>}
+                                                          secondary={
+                                                              <Typography variant="body2" color="textPrimary"
+                                                                          sx={{
+                                                                              wordBreak: "break-word",
+                                                                              whiteSpace: "pre-wrap"
+                                                                          }}>
+                                                                  {truncateContent(post.content, 500)}
+                                                              </Typography>
+                                                          }/>
+                                        </ListItemButton>
+                                        <Button variant="caption" color="textPrimary" ml={2}
+                                                onClick={() => handleAuthorClick(post.author)}>
+                                            Written
+                                            by {post.author} at {adjustPostOrCommentDateToUserTimezone(post.createdAt)}
+                                        </Button>
+                                        <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
+                                            {post.tags.map((tag) => (
+                                                <Button onClick={() => handleSearchTag(tag)} key={tag}
+                                                        sx={{margin: 0.5, padding: 1, wordBreak: "break-word"}}>
+                                                    {tag}
+                                                </Button>
+                                            ))}
+                                        </Box>
+                                    </Paper>
+                                </ListItem>
+                            </Fragment>
+                        ))}
+                    </List>
+                )}
+                {!loading && !error && (
+                    <Box display="flex" justifyContent="space-between" my={2}>
+                        <Pagination count={totalPages} page={page} onChange={handlePageChange} color="primary"/>
+                    </Box>
+                )}
             </Container>
-            {isAuthenticated &&
+            {isAuthenticated && !error && !loading &&
                 <Fab onClick={handleClickCreatePost} variant="extended" color="primary" aria-label="add" sx={{
                     margin: 0,
                     top: 'auto',
@@ -187,8 +223,12 @@ function Home({isAuthenticated, setIsAuthenticated}) {
                     <Add/>
                     Post
                 </Fab>
-
             }
+            <Snackbar open={snackbarOpen} onClose={handleSnackbarClose} autoHideDuration={10000} anchorOrigin={{vertical: 'bottom',horizontal: 'center'}}>
+                <Alert severity={snackbarSeverity}>
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
             <Dialog open={createPostDialogOpen} onClose={handleClickCreatePost} fullWidth={true}
                     fullScreen={fullScreen}>
                 <DialogTitle>Create Post</DialogTitle>
@@ -201,8 +241,6 @@ function Home({isAuthenticated, setIsAuthenticated}) {
                         label="Title"
                         type="text"
                         fullWidth
-                        multiline
-                        rows={2}
                         required
                         inputProps={{maxLength: 100}}
                         value={newPostTitle}
@@ -260,4 +298,3 @@ function Home({isAuthenticated, setIsAuthenticated}) {
     )
 }
 
-export default Home;

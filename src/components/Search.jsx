@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import {adjustPostOrCommentDateToUserTimezone} from "../utils/DateUtils.js";
 
-function Search({isAuthenticated, setIsAuthenticated}) {
+export default function Search({isAuthenticated, setIsAuthenticated}) {
     const {searchTerm} = useParams()
     const location = useLocation();
     const [page, setPage] = useState(1);
@@ -81,7 +81,7 @@ function Search({isAuthenticated, setIsAuthenticated}) {
     }
 
     const handleSearchTag = (keyword) => {
-        navigate(`/search/${keyword}`, { state: { searchType: 'tags' } })
+        navigate(`/search/${keyword}`, {state: {searchType: 'tags'}})
     }
 
     const handleSearchType = (event, newSearchType) => {
@@ -89,6 +89,16 @@ function Search({isAuthenticated, setIsAuthenticated}) {
         if (newSearchType !== null) {
             setSearchType(newSearchType);
         }
+    };
+
+    const truncateContent = (content,maxLength) => {
+        const newlineIndex = content.indexOf('\n');
+
+        if (newlineIndex !== -1 && newlineIndex < maxLength) {
+            return content.substring(0, newlineIndex)+" ...";
+        }
+
+        return content.length > maxLength ? content.substring(0, maxLength) + " ..." : content;
     };
 
     const renderList = () => {
@@ -137,7 +147,7 @@ function Search({isAuthenticated, setIsAuthenticated}) {
                                             secondary={
                                                 <Typography variant="body2" color="textPrimary"
                                                             sx={{wordBreak: "break-word", whiteSpace: "pre-wrap"}}>
-                                                    {post.content.length > 1000 ? post.content.substring(0, 1000) + "..." : post.content}
+                                                    {truncateContent(post.content,500)}
                                                 </Typography>
                                             }
                                         />
@@ -149,7 +159,7 @@ function Search({isAuthenticated, setIsAuthenticated}) {
                                     </Button>
                                     <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
                                         {post.tags.map((tag) => (
-                                            <Button onClick={()=>handleSearchTag(tag)} key={tag}
+                                            <Button onClick={() => handleSearchTag(tag)} key={tag}
                                                     sx={{margin: 0.5, padding: 1, wordBreak: "break-word"}}>
                                                 {tag}
                                             </Button>
@@ -169,7 +179,7 @@ function Search({isAuthenticated, setIsAuthenticated}) {
             <TopAppBar isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated}/>
             <Container>
                 <Typography variant="h4" gutterBottom sx={{wordBreak: "break-word"}}>
-                    Search by {"'"+searchTerm+"'"}
+                    Search results of {"'" + searchTerm + "'"}
                 </Typography>
                 <ToggleButtonGroup value={searchType} exclusive onChange={handleSearchType} aria-label="search type">
                     <ToggleButton value="posts" aria-label="posts">Posts</ToggleButton>
@@ -185,4 +195,3 @@ function Search({isAuthenticated, setIsAuthenticated}) {
     )
 }
 
-export default Search;

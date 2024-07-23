@@ -1,7 +1,7 @@
 import DefaultRoutes from "./DefaultRoutes.jsx";
 import {BrowserRouter} from "react-router-dom";
 
-function App() {
+export default function App() {
 
     return (
         <BrowserRouter>
@@ -9,5 +9,3 @@ function App() {
         </BrowserRouter>
     )
 }
-
-export default App

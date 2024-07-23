@@ -19,7 +19,7 @@ import {Fragment, useState} from "react";
 import Auth from "./Auth.jsx";
 
 
-function TopAppBar({isAuthenticated, setIsAuthenticated}) {
+export default function TopAppBar({isAuthenticated, setIsAuthenticated}) {
     const navigate = useNavigate();
     const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
     const [openAuthDialog, setOpenAuthDialog] = useState(false);
@@ -109,4 +109,3 @@ function TopAppBar({isAuthenticated, setIsAuthenticated}) {
 
 }
 
-export default TopAppBar;
