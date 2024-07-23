@@ -1,9 +1,11 @@
 import {Fragment, useEffect, useState} from "react";
 import axios from "axios";
 import {
+    Alert,
     Box,
     Button,
     Chip,
+    CircularProgress,
     Container,
     Dialog,
     DialogActions,
@@ -27,6 +29,7 @@ import {jwtDecode} from "jwt-decode";
 import {useTheme} from "@mui/material/styles";
 import {adjustPostOrCommentDateToUserTimezone} from "../utils/DateUtils.js";
 import endpoints from "../utils/Endpoints.js";
+import {useAlertSnackbar} from "./use_functions/useAlertSnackbar.jsx";
 
 export default function Post({isAuthenticated, setIsAuthenticated}) {
     const [post, setPost] = useState([]);
@@ -35,13 +38,13 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
     const [size] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
     const [showComments, setShowComments] = useState(true);
-    const {uniqueNum} = useParams();
-    const navigate = useNavigate();
     const [addCommentDialogOpen, setAddCommentDialogOpen] = useState(false);
     const [newCommentContent, setNewCommentContent] = useState('');
-    const [errors, setErrors] = useState({});
-    const theme = useTheme();
-    const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
+    const [postLoading, setPostLoading] = useState(true);
+    const [fetchPostError, setFetchPostError] = useState(null);
+    const [commentsLoading, setCommentsLoading] = useState(true);
+    const [fetchCommentsError, setFetchCommentsError] = useState(null);
+    const [formErrors, setFormErrors] = useState({});
     const [isOwnPost, setIsOwnPost] = useState(false)
     const [editPostDialogOpen, setEditPostDialogOpen] = useState(false);
     const [newPostTitle, setNewPostTitle] = useState('');
@@ -53,50 +56,68 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
     const [editCommentDialogOpen, setEditCommentDialogOpen] = useState(false)
     const [commentUniqueNum, setCommentUniqueNum] = useState('')
     const [editedCommentContent, setEditedCommentContent] = useState('')
+    const {openSnackbar,handleSnackbarClose, AlertSnackbar} = useAlertSnackbar();
+    const {uniqueNum} = useParams();
+    const navigate = useNavigate();
+    const theme = useTheme();
+    const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
     useEffect(() => {
-        axios.get(endpoints.posts.getByUniqueNum(uniqueNum))
-            .then(response => {
+        const fetchPost = async () => {
+            setPostLoading(true);
+            try {
+                const response = await axios.get(endpoints.posts.getByUniqueNum(uniqueNum));
                 const token = localStorage.getItem('jwt');
                 if (token) {
                     const decodedToken = jwtDecode(token);
                     const user = decodedToken.sub;
                     if (user === response.data.author) {
-                        setIsOwnPost(true)
-                        setNewTags(response.data.tags)
-                        setNewPostTitle(response.data.title)
-                        setNewPostContent(response.data.content)
+                        setIsOwnPost(true);
+                        setNewTags(response.data.tags);
+                        setNewPostTitle(response.data.title);
+                        setNewPostContent(response.data.content);
                     }
                 }
-                setPost(response.data)
-                fetchComments()
-            }).catch(error => {
-            console.error(error);
-        })
-    }, [uniqueNum, page]);
+                setPost(response.data);
+                fetchComments();
+            } catch (error) {
+                console.error(error);
+                setFetchPostError('Failed to load post. Please try again later.');
+                setFetchCommentsError('Failed to load comments. Please try again later.')
+            } finally {
+                setPostLoading(false);
+                setCommentsLoading(false);
+            }
+        };
+        fetchPost();
+    }, [uniqueNum, page, size]);
 
-    const fetchComments = () => {
-        axios.get(endpoints.comments.getAllByPostUniqueNum(uniqueNum,page,size))
+    const fetchComments = async () => {
+        setCommentsLoading(true);
+        await axios.get(endpoints.comments.getAllByPostUniqueNum(uniqueNum, page, size))
             .then(response => {
                 setComments(response.data.comments)
                 setTotalPages(response.data.totalPages)
             }).catch(error => {
-            console.error(error);
-        })
+                console.error(error);
+                setFetchCommentsError('Failed to load comments. Please try again later.')
+            }).finally(() => {
+                setCommentsLoading(false);
+            })
     }
 
     const handlePageChange = (event, value) => {
         setPage(value);
     };
 
-    const handleDisplayComments = () => setShowComments((state)=>!state);
+    const handleDisplayComments = () => setShowComments((state) => !state);
 
     const handleAuthorClick = (author) => {
         navigate(`/profile/${author}`)
     }
 
     const handleSearchTag = (keyword) => {
-        navigate(`/search/${keyword}`, { state: { searchType: 'tags' } })
+        navigate(`/search/${keyword}`, {state: {searchType: 'tags'}})
     }
 
     const reloadToPageOne = () => {
@@ -108,38 +129,40 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
     }
 
     //edit post
-    const handleEditPost = () => {
+    const handleEditPost = async () => {
         const token = localStorage.getItem('jwt');
-        let formErrors = {};
+        let currentFormErrors = {};
         if (!newPostTitle.trim()) {
-            formErrors.title = "Title cannot be empty";
+            currentFormErrors.title = "Title cannot be empty";
         }
         if (!newPostContent.trim()) {
-            formErrors.content = "Content cannot be empty";
+            currentFormErrors.content = "Content cannot be empty";
         }
 
-        setErrors(formErrors)
+        setFormErrors(currentFormErrors)
 
-        if (Object.keys(formErrors).length === 0) {
+        if (Object.keys(currentFormErrors).length === 0) {
             const newPost = {
                 title: newPostTitle,
                 content: newPostContent,
                 tags: newTags
             };
-            axios.put(endpoints.posts.editByUniqueNum(uniqueNum), newPost, {
+            setEditPostDialogOpen(false);
+            openSnackbar('Editing', 'info',6000)
+            await axios.put(endpoints.posts.editByUniqueNum(uniqueNum), newPost, {
                 headers: {
                     Authorization: 'Bearer ' + token
                 }
             }).then(() => {
-                setEditPostDialogOpen(false);
                 reloadToPageOne()
             }).catch(error => {
                 console.error(error);
+                openSnackbar('Editing failed. Please try again later.', 'error',6000)
             });
         }
     }
 
-    const handleClickEditPost = () => setEditPostDialogOpen((state)=>!state)
+    const handleClickEditPost = () => setEditPostDialogOpen((state) => !state)
 
     const handleAddTag = () => {
         if (tag && !newTags.includes(tag)) {
@@ -153,9 +176,11 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
     };
 
     //delete post
-    const handleDeletePost = () => {
+    const handleDeletePost = async () => {
         const token = localStorage.getItem('jwt');
-        axios.delete(endpoints.posts.deleteByUniqueNum(uniqueNum), {
+        setDeletePostDialogOpen(false)
+        openSnackbar('Deleting', 'info',6000)
+        await axios.delete(endpoints.posts.deleteByUniqueNum(uniqueNum), {
             headers: {
                 Authorization: 'Bearer ' + token
             }
@@ -163,57 +188,61 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
             navigate("/home")
         }).catch(error => {
             console.error(error);
-        });
+            openSnackbar('Deletion failed. Please try again later.', 'error',6000)
+        })
     }
 
-    const handleClickDeletePost = () => setDeletePostDialogOpen((state)=>!state)
+    const handleClickDeletePost = () => setDeletePostDialogOpen((state) => !state)
 
     //add comment
-    const handleAddComment = () => {
+    const handleAddComment = async () => {
         const token = localStorage.getItem('jwt');
         const decodedToken = jwtDecode(token);
         const user = decodedToken.sub;
 
-        let formErrors = {}
+        let currentFormErrors = {}
         if (!newCommentContent.trim()) {
-            formErrors.content = "Content cannot be empty";
+            currentFormErrors.content = "Content cannot be empty";
         }
-        setErrors(formErrors)
+        setFormErrors(currentFormErrors)
 
-        if (Object.keys(formErrors).length === 0) {
+        if (Object.keys(currentFormErrors).length === 0) {
             const newComment = {
                 content: newCommentContent,
                 author: user
             }
-            axios.post(endpoints.comments.createByPostUniqueNum(uniqueNum), newComment, {
+            setAddCommentDialogOpen(false)
+            openSnackbar('Commenting', 'info',6000)
+            await axios.post(endpoints.comments.createByPostUniqueNum(uniqueNum), newComment, {
                 headers: {
                     Authorization: 'Bearer ' + token
                 }
             }).then(() => {
-                setAddCommentDialogOpen(false)
                 setNewCommentContent('')
                 reloadToPageOne()
             }).catch(error => {
                 console.error(error)
+                openSnackbar('Couldn\'t comment. Please try again later.', 'error',6000)
             })
         }
     }
 
-    const handleClickAddComment = () => setAddCommentDialogOpen((state)=>!state);
+    const handleClickAddComment = () => setAddCommentDialogOpen((state) => !state);
 
     //delete comment
-    const handleDeleteComment = () => {
+    const handleDeleteComment = async () => {
         const token = localStorage.getItem('jwt');
-
-        axios.delete(endpoints.comments.deleteByCommentUniqueNum(commentUniqueNum), {
+        setDeleteCommentDialogOpen(false)
+        openSnackbar('Commenting', 'info',6000)
+        await axios.delete(endpoints.comments.deleteByCommentUniqueNum(commentUniqueNum), {
             headers: {
                 Authorization: 'Bearer ' + token
             }
         }).then(() => {
-            setDeleteCommentDialogOpen(false)
             reloadToPageOne()
         }).catch(error => {
             console.error(error);
+            openSnackbar('Deletion failed. Please try again later.', 'error',6000)
         });
     }
 
@@ -229,30 +258,33 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
     }
 
     //edit comment
-    const handleEditComment = () => {
+    const handleEditComment = async () => {
         const token = localStorage.getItem('jwt');
 
-        let formErrors = {}
+        let currentFormErrors = {}
         if (!editedCommentContent.trim()) {
-            formErrors.content = "Content cannot be empty";
+            currentFormErrors.content = "Content cannot be empty";
         }
-        setErrors(formErrors)
+        setFormErrors(currentFormErrors)
+        setEditCommentDialogOpen(false);
+        openSnackbar('Commenting', 'info',6000)
 
-        if (Object.keys(formErrors).length === 0) {
+        if (Object.keys(currentFormErrors).length === 0) {
             const newComment = {
                 content: editedCommentContent,
             }
 
-            axios.put(endpoints.comments.editByCommentUniqueNum(commentUniqueNum), newComment, {
+            await axios.put(endpoints.comments.editByCommentUniqueNum(commentUniqueNum), newComment, {
                 headers: {
                     Authorization: 'Bearer ' + token
                 }
             }).then(() => {
-                setEditCommentDialogOpen(false);
                 setEditedCommentContent('');
                 fetchComments()
+                handleSnackbarClose()
             }).catch(error => {
                 console.error(error)
+                openSnackbar('Editing failed. Please try again later.', 'error',6000)
             })
         }
     }
@@ -272,41 +304,61 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
         <Fragment>
             <TopAppBar isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated}/>
             <Container sx={{flexWrap: 'wrap', marginTop: 2}}>
-                <Typography variant="h4" gutterBottom sx={{wordBreak: "break-word"}}>
-                    {post.title}
-                </Typography>
-                {isOwnPost &&
+                {postLoading ? (
+                    <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+                        <CircularProgress/>
+                    </Box>
+                ) : fetchPostError ? (
+                    <Alert severity="error">{fetchPostError}</Alert>
+                ) : (
                     <Fragment>
-                        <Button color="primary" onClick={handleClickEditPost}>
-                            Edit
+                        <Typography variant="h4" gutterBottom sx={{wordBreak: "break-word"}}>
+                            {post.title}
+                        </Typography>
+                        {isOwnPost &&
+                            <Fragment>
+                                <Button color="primary" onClick={handleClickEditPost}>
+                                    Edit
+                                </Button>
+                                <Button color="error" onClick={handleClickDeletePost}>
+                                    Delete
+                                </Button>
+                            </Fragment>
+                        }
+                        <Divider/>
+                        <Typography variant="body1" gutterBottom mt={2}
+                                    sx={{wordBreak: "break-word", whiteSpace: "pre-wrap"}}>
+                            {post.content}
+                        </Typography>
+                        <Button variant="caption" color="textPrimary" ml={2}
+                                onClick={() => handleAuthorClick(post.author)}>
+                            Written by {post.author} at {adjustPostOrCommentDateToUserTimezone(post.createdAt)}
                         </Button>
-                        <Button color="error" onClick={handleClickDeletePost}>
-                            Delete
-                        </Button>
+                        <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
+                            {post.tags && post.tags.map((tag) => (
+                                <Button onClick={() => handleSearchTag(tag)} key={tag}
+                                        sx={{margin: 0.5, padding: 1, wordBreak: "break-word"}}>
+                                    {tag}
+                                </Button>
+                            ))}
+                        </Box>
                     </Fragment>
-                }
-                <Divider/>
-                <Typography variant="body1" gutterBottom mt={2} sx={{wordBreak: "break-word",whiteSpace: "pre-wrap"}}>
-                    {post.content}
-                </Typography>
-                <Button variant="caption" color="textPrimary" ml={2} onClick={() => handleAuthorClick(post.author)}>
-                    Written by {post.author} at {adjustPostOrCommentDateToUserTimezone(post.createdAt)}
-                </Button>
-                <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
-                    {post.tags && post.tags.map((tag) => (
-                        <Button onClick={()=>handleSearchTag(tag)} key={tag}
-                                sx={{margin: 0.5, padding: 1, wordBreak: "break-word"}}>
-                            {tag}
-                        </Button>
-                    ))}
-                </Box>
+                )}
                 <Divider>
                     <Chip label="COMMENTS" onClick={handleDisplayComments} color="primary"/>
                 </Divider>
                 {showComments &&
                     <Fragment>
+                        {commentsLoading ? (
+                        <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+                            <CircularProgress/>
+                        </Box>
+                        ) : fetchCommentsError ? (
+                        <Alert severity="error">{fetchCommentsError}</Alert>
+                        ) : (
                         <List>
-                            {comments.map((comment) => {
+                            {comments.length>0?(
+                                comments.map((comment) => {
                                 const token = localStorage.getItem('jwt');
                                 let user = '';
                                 if (token) {
@@ -317,12 +369,13 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
                                     <ListItem key={comment.uniqueNum} alignItems="flex-start">
                                         <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
                                             <Typography variant="body1" gutterBottom ml={2} mt={1}
-                                                        sx={{wordBreak: "break-word",whiteSpace: "pre-wrap"}}>
+                                                        sx={{wordBreak: "break-word", whiteSpace: "pre-wrap"}}>
                                                 {comment.content}
                                             </Typography>
                                             <Button variant="caption" color="textPrimary"
                                                     onClick={() => handleAuthorClick(comment.author)}>
-                                                Written by {comment.author} at {adjustPostOrCommentDateToUserTimezone(comment.createdAt)}
+                                                Written
+                                                by {comment.author} at {adjustPostOrCommentDateToUserTimezone(comment.createdAt)}
                                             </Button>
 
                                             {comment.author === user &&
@@ -336,15 +389,24 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
                                         </Paper>
                                     </ListItem>
                                 );
-                            })}
+                            })):(
+                                <Paper sx={{margin: 0.5, padding: 1, width: '100%', textAlign: 'center'}}>
+                                    <Typography variant="h6" color="textPrimary">
+                                        This post has no comments.
+                                    </Typography>
+                                </Paper>
+                            )}
                         </List>
+                        )}
+                        {!commentsLoading && !fetchCommentsError && comments.length>0 && (
                         <Box display="flex" justifyContent="space-between" my={2}>
                             <Pagination count={totalPages} page={page} onChange={handlePageChange} color="primary"/>
                         </Box>
+                        )}
                     </Fragment>
                 }
             </Container>
-            {isAuthenticated &&
+            {isAuthenticated && !commentsLoading && !fetchCommentsError && !postLoading && !fetchPostError &&
                 <Fab onClick={handleClickAddComment} variant="extended" color="primary" aria-label="add" sx={{
                     margin: 0,
                     top: 'auto',
@@ -357,6 +419,7 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
                     Comment
                 </Fab>
             }
+            <AlertSnackbar/>
             <Dialog id="editPostDialog" open={editPostDialogOpen} onClose={handleClickEditPost} fullWidth={true}
                     fullScreen={fullScreen}>
                 <DialogTitle>Edit Post</DialogTitle>
@@ -375,8 +438,8 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
                         inputProps={{maxLength: 100}}
                         value={newPostTitle}
                         onChange={(e) => setNewPostTitle(e.target.value)}
-                        error={!!errors.title}
-                        helperText={errors.title}
+                        error={!!formErrors.title}
+                        helperText={formErrors.title}
                     />
                     <TextField
                         margin="normal"
@@ -391,8 +454,8 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
                         inputProps={{maxLength: 10000}}
                         value={newPostContent}
                         onChange={(e) => setNewPostContent(e.target.value)}
-                        error={!!errors.content}
-                        helperText={errors.content}
+                        error={!!formErrors.content}
+                        helperText={formErrors.content}
                     />
                     <TextField
                         margin="normal"
@@ -451,8 +514,8 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
                         inputProps={{maxLength: 1000}}
                         value={newCommentContent}
                         onChange={(e) => setNewCommentContent(e.target.value)}
-                        error={!!errors.content}
-                        helperText={errors.content}
+                        error={!!formErrors.content}
+                        helperText={formErrors.content}
                     />
                 </DialogContent>
                 <DialogActions>
@@ -477,8 +540,8 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
                         inputProps={{maxLength: 1000}}
                         value={editedCommentContent}
                         onChange={(e) => setEditedCommentContent(e.target.value)}
-                        error={!!errors.content}
-                        helperText={errors.content}
+                        error={!!formErrors.content}
+                        helperText={formErrors.content}
                     />
                 </DialogContent>
                 <DialogActions>

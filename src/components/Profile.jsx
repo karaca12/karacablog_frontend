@@ -3,13 +3,24 @@ import axios from "axios";
 import {useNavigate, useParams} from "react-router-dom";
 import TopAppBar from "./TopAppBar.jsx";
 import {
-    Alert, Box,
-    Button, Chip,
+    Alert,
+    Box,
+    Button,
+    Chip,
+    CircularProgress,
     Container,
     Dialog,
     DialogActions,
     DialogContent,
-    DialogTitle, Divider, IconButton, InputAdornment, List, ListItem, ListItemButton, ListItemText, Pagination,
+    DialogTitle,
+    Divider,
+    IconButton,
+    InputAdornment,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemText,
+    Pagination,
     Paper,
     Table,
     TableBody,
@@ -29,28 +40,32 @@ import {yupResolver} from "@hookform/resolvers/yup";
 import {Visibility, VisibilityOff} from "@mui/icons-material";
 import {adjustBirthDateToUserTimezone} from "../utils/DateUtils.js";
 import endpoints from "../utils/Endpoints.js";
+import {truncateContent} from "../utils/TruncateContent.js";
+import {useAlertSnackbar} from "./use_functions/useAlertSnackbar.jsx";
 
-export default function Profile({isAuthenticated,setIsAuthenticated}) {
+export default function Profile({isAuthenticated, setIsAuthenticated}) {
     const [user, setUser] = useState({});
-    const {username} = useParams()
     const [isOwnProfile, setIsOwnProfile] = useState(false)
-    const theme = useTheme();
-    const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
     const [editProfileDialogOpen, setEditProfileDialogOpen] = useState(false);
     const [changePasswordDialogOpen, setChangePasswordDialogOpen] = useState(false);
     const [areYouSurePasswordDialogOpen, setAreYouSurePasswordDialogOpen] = useState(false);
     const [passwordData, setPasswordData] = useState(null);
-    const [error, setError] = useState(null);
-    const [showCurrentPassword,setShowCurrentPassword]=useState(false);
-    const [showNewPassword,setShowNewPassword]=useState(false);
-    const [displayPosts,setDisplayPosts]=useState(true)
-    const [posts,setPosts]=useState([])
+    const [postsLoading, setPostsLoading] = useState(true);
+    const [fetchPostsError, setFetchPostsError] = useState(null);
+    const [userLoading, setUserLoading] = useState(true);
+    const [fetchUserError, setFetchUserError] = useState(null);
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [displayPosts, setDisplayPosts] = useState(true)
+    const [posts, setPosts] = useState([])
     const [page, setPage] = useState(1);
     const [size] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
+    const {openSnackbar, AlertSnackbar} = useAlertSnackbar();
+    const {username} = useParams()
     const navigate = useNavigate();
-
-
+    const theme = useTheme();
+    const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
     const editSchema = yup.object().shape({
         email: yup.string().email('Please enter a valid email').required('Email is required'),
@@ -75,34 +90,49 @@ export default function Profile({isAuthenticated,setIsAuthenticated}) {
 
 
     useEffect(() => {
-        axios.get(endpoints.users.getByUsername(username))
-            .then(response => {
-                setUser(response.data)
+        const fetchPosts = async () => {
+            setPostsLoading(true);
+            await axios.get(endpoints.posts.getByUsername(username, page, size))
+                .then(response => {
+                    setPosts(response.data.posts)
+                    setTotalPages(response.data.totalPages)
+                }).catch(error => {
+                    console.error(error);
+                    setFetchPostsError('Failed to load posts. Please try again later.')
+                }).finally(() => {
+                    setPostsLoading(false)
+                })
+        }
+
+        const fetchUser = async () => {
+            setUserLoading(true)
+            try {
+                const response = await axios.get(endpoints.users.getByUsername(username));
+                setUser(response.data);
                 const token = localStorage.getItem("jwt");
                 if (token) {
                     const decodedToken = jwtDecode(token);
                     const userFromToken = decodedToken.sub;
                     if (response.data.username === userFromToken) {
-                        setIsOwnProfile(true)
+                        setIsOwnProfile(true);
                     }
                 }
                 fetchPosts();
-            }).catch(error => {
-            console.error(error);
-        })
-    }, [username,page]);
+            } catch (error) {
+                console.error(error);
+                setFetchUserError('Failed to load user. Please try again later.')
+                setFetchPostsError('Failed to load posts. Please try again later.')
+            } finally {
+                setUserLoading(false)
+                setPostsLoading(false)
+            }
+        };
 
-    const fetchPosts = () => {
-        axios.get(endpoints.posts.getByUsername(username,page,size))
-            .then(response => {
-                setPosts(response.data.posts)
-                setTotalPages(response.data.totalPages)
-            }).catch(error => {
-            console.error(error);
-        })
-    }
+        fetchUser();
+    }, [username, page, size]);
 
-    const handleDisplayPosts=()=>setDisplayPosts((state)=>!state)
+
+    const handleDisplayPosts = () => setDisplayPosts((state) => !state)
     const handlePageChange = (event, value) => {
         setPage(value);
     };
@@ -112,7 +142,7 @@ export default function Profile({isAuthenticated,setIsAuthenticated}) {
     };
 
     const handleSearchTag = (keyword) => {
-        navigate(`/search/${keyword}`, { state: { searchType: 'tags' } })
+        navigate(`/search/${keyword}`, {state: {searchType: 'tags'}})
     }
 
     useEffect(() => {
@@ -127,22 +157,24 @@ export default function Profile({isAuthenticated,setIsAuthenticated}) {
 
 
     //edit profile
-    const handleEditProfile = data => {
+    const handleEditProfile = async data => {
         const token = localStorage.getItem("jwt");
-        axios.put(endpoints.users.editByUsername(username), data, {
+        setEditProfileDialogOpen(false)
+        openSnackbar('Editing', 'info', 6000)
+        await axios.put(endpoints.users.editByUsername(username), data, {
             headers: {
                 Authorization: 'Bearer ' + token
             }
         }).then(() => {
-            setEditProfileDialogOpen(false)
             window.location.reload();
         }).catch(error => {
             console.error(error)
+            openSnackbar('Editing failed. Please try again later.', 'error', 6000)
         })
 
     }
 
-    const handleClickEditProfile = () => setEditProfileDialogOpen((state)=>!state)
+    const handleClickEditProfile = () => setEditProfileDialogOpen((state) => !state)
 
     //change password
     const handleChangePassword = data => {
@@ -151,119 +183,146 @@ export default function Profile({isAuthenticated,setIsAuthenticated}) {
         setAreYouSurePasswordDialogOpen(true);
     };
 
-    const handleConfirmChangePassword = () => {
+    const handleConfirmChangePassword = async () => {
         const token = localStorage.getItem("jwt");
-        axios.put(endpoints.users.changePasswordByUsername(username), passwordData, {
+        setAreYouSurePasswordDialogOpen(false);
+        openSnackbar('Changing password', 'info', 6000)
+        await axios.put(endpoints.users.changePasswordByUsername(username), passwordData, {
             headers: {
                 Authorization: 'Bearer ' + token
             }
         }).then(() => {
-            setAreYouSurePasswordDialogOpen(false);
             window.location.reload();
         }).catch(error => {
-            handleClickAreYouSurePassword()
-            setError(error.response?.data?.message || 'Password change failed')
+            console.error(error);
+            openSnackbar('Couldn\'t change password. Please try again later.', 'error', 6000)
         });
     };
 
-    const handleCLickChangePassword=()=> setChangePasswordDialogOpen((state)=>!state)
-    const handleClickAreYouSurePassword = () => setAreYouSurePasswordDialogOpen((state)=>!state)
+    const handleCLickChangePassword = () => setChangePasswordDialogOpen((state) => !state)
+    const handleClickAreYouSurePassword = () => setAreYouSurePasswordDialogOpen((state) => !state)
     const handleClickShowCurrentPassword = () => setShowCurrentPassword((show) => !show);
     const handleClickShowNewPassword = () => setShowNewPassword((show) => !show);
-
-    const truncateContent = (content,maxLength) => {
-        const newlineIndex = content.indexOf('\n');
-
-        if (newlineIndex !== -1 && newlineIndex < maxLength) {
-            return content.substring(0, newlineIndex)+" ...";
-        }
-
-        return content.length > maxLength ? content.substring(0, maxLength) + " ..." : content;
-    };
 
 
     return (<Fragment>
         <TopAppBar isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated}/>
         <Container sx={{marginTop: 3}}>
-            <Typography variant="h4" gutterBottom sx={{wordBreak: "break-word"}}>
-                {user.username}
-            </Typography>
-            {isOwnProfile && <Fragment>
-                <Button color="primary" onClick={handleClickEditProfile}>
-                    Edit Profile
-                </Button>
-                <Button color="error" onClick={handleCLickChangePassword}>
-                    Change Password
-                </Button>
-            </Fragment>
-            }
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell sx={{backgroundColor: '#757575', color: 'white'}}>Email</TableCell>
-                            <TableCell align="left" sx={{backgroundColor: '#757575', color: 'white'}}>Name</TableCell>
-                            <TableCell align="left"
-                                       sx={{backgroundColor: '#757575', color: 'white'}}>Surname</TableCell>
-                            <TableCell align="left" sx={{backgroundColor: '#757575', color: 'white'}}>Birth
-                                Date</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell>{user.email}</TableCell>
-                            <TableCell align="left">{user.firstName}</TableCell>
-                            <TableCell align="left">{user.lastName}</TableCell>
-                            <TableCell align="left">{adjustBirthDateToUserTimezone(user.birthDate)}</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            {userLoading ? (
+                <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+                    <CircularProgress/>
+                </Box>
+            ) : fetchUserError ? (
+                <Alert severity="error">{fetchUserError}</Alert>
+            ) : (
+                <Fragment>
+                    <Typography variant="h4" gutterBottom sx={{wordBreak: "break-word"}}>
+                        {user.username}
+                    </Typography>
+                    {isOwnProfile && <Fragment>
+                        <Button color="primary" onClick={handleClickEditProfile}>
+                            Edit Profile
+                        </Button>
+                        <Button color="error" onClick={handleCLickChangePassword}>
+                            Change Password
+                        </Button>
+                    </Fragment>
+                    }
+                    <TableContainer component={Paper}>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell sx={{backgroundColor: '#757575', color: 'white'}}>Email</TableCell>
+                                    <TableCell align="left"
+                                               sx={{backgroundColor: '#757575', color: 'white'}}>Name</TableCell>
+                                    <TableCell align="left"
+                                               sx={{backgroundColor: '#757575', color: 'white'}}>Surname</TableCell>
+                                    <TableCell align="left" sx={{backgroundColor: '#757575', color: 'white'}}>Birth
+                                        Date</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                <TableRow>
+                                    <TableCell>{user.email}</TableCell>
+                                    <TableCell align="left">{user.firstName}</TableCell>
+                                    <TableCell align="left">{user.lastName}</TableCell>
+                                    <TableCell align="left">{adjustBirthDateToUserTimezone(user.birthDate)}</TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Fragment>
+            )}
             <Divider sx={{marginTop: 2}}>
                 <Chip label="POSTS" onClick={handleDisplayPosts} color="primary"/>
             </Divider>
             {displayPosts &&
                 <Fragment>
-                    <List>
-                        {posts.map((post) => (
-                            <Fragment key={post.uniqueNum}>
-                                <ListItem alignItems="flex-start">
-                                    <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
-                                        <ListItemButton onClick={() => handleClickPost(post.uniqueNum)}>
-                                            <ListItemText
-                                                primary={
-                                                    <Typography variant="h6" color="textPrimary"
-                                                                sx={{wordBreak: "break-word", whiteSpace: "pre-wrap"}}>
-                                                        {post.title}
-                                                    </Typography>
-                                                }
-                                                secondary={
-                                                    <Typography variant="body2" color="textPrimary"
-                                                                sx={{wordBreak: "break-word", whiteSpace: "pre-wrap"}}>
-                                                        {truncateContent(post.content,500)}
-                                                    </Typography>
-                                                }
-                                            />
-                                        </ListItemButton>
-                                        <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
-                                            {post.tags.map((tag) => (
-                                                <Button onClick={()=>handleSearchTag(tag)} key={tag}
-                                                        sx={{margin: 0.5, padding: 1, wordBreak: "break-word"}}>
-                                                    {tag}
-                                                </Button>
-                                            ))}
-                                        </Box>
-                                    </Paper>
-                                </ListItem>
-                            </Fragment>
-                        ))}
-                    </List>
-                    <Box display="flex" justifyContent="space-between" my={2}>
-                        <Pagination count={totalPages} page={page} onChange={handlePageChange} color="primary"/>
-                    </Box>
+                    {postsLoading ? (
+                        <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+                            <CircularProgress/>
+                        </Box>
+                    ) : fetchPostsError ? (
+                        <Alert severity="error">{fetchPostsError}</Alert>
+                    ) : (
+                        <List>
+                            {posts.length > 0 ? (
+                                posts.map((post) => (
+                                <Fragment key={post.uniqueNum}>
+                                    <ListItem alignItems="flex-start">
+                                        <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
+                                            <ListItemButton onClick={() => handleClickPost(post.uniqueNum)}>
+                                                <ListItemText
+                                                    primary={
+                                                        <Typography variant="h6" color="textPrimary"
+                                                                    sx={{
+                                                                        wordBreak: "break-word",
+                                                                        whiteSpace: "pre-wrap"
+                                                                    }}>
+                                                            {post.title}
+                                                        </Typography>
+                                                    }
+                                                    secondary={
+                                                        <Typography variant="body2" color="textPrimary"
+                                                                    sx={{
+                                                                        wordBreak: "break-word",
+                                                                        whiteSpace: "pre-wrap"
+                                                                    }}>
+                                                            {truncateContent(post.content, 500)}
+                                                        </Typography>
+                                                    }
+                                                />
+                                            </ListItemButton>
+                                            <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
+                                                {post.tags.map((tag) => (
+                                                    <Button onClick={() => handleSearchTag(tag)} key={tag}
+                                                            sx={{margin: 0.5, padding: 1, wordBreak: "break-word"}}>
+                                                        {tag}
+                                                    </Button>
+                                                ))}
+                                            </Box>
+                                        </Paper>
+                                    </ListItem>
+                                </Fragment>
+                                ))
+                            ) : (
+                                <Paper sx={{margin: 0.5, padding: 1, width: '100%', textAlign: 'center'}}>
+                                    <Typography variant="h6" color="textPrimary">
+                                        User has no posts.
+                                    </Typography>
+                                </Paper>
+                            )}
+                        </List>
+                    )}
+                    {!postsLoading && !fetchPostsError && posts.length>0&& (
+                        <Box display="flex" justifyContent="space-between" my={2}>
+                            <Pagination count={totalPages} page={page} onChange={handlePageChange} color="primary"/>
+                        </Box>
+                    )}
                 </Fragment>
             }
         </Container>
+        <AlertSnackbar/>
         <Dialog id="editPofileDialog" open={editProfileDialogOpen} onClose={handleClickEditProfile}
                 fullWidth={true}
                 fullScreen={fullScreen}>
@@ -404,7 +463,6 @@ export default function Profile({isAuthenticated,setIsAuthenticated}) {
                 <Button type="submit" color="error" onClick={handleConfirmChangePassword}>Change Password</Button>
             </DialogActions>
         </Dialog>
-        {error && <Alert severity="error" sx={{mb: 2}}>{error}</Alert>}
 
     </Fragment>)
 }

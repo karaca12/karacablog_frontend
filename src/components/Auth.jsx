@@ -4,7 +4,6 @@ import {useForm} from "react-hook-form";
 import {yupResolver} from "@hookform/resolvers/yup";
 import axios from "axios";
 import {
-    Alert,
     Box,
     Button,
     Dialog,
@@ -16,11 +15,13 @@ import {
 } from "@mui/material";
 import {Visibility, VisibilityOff} from "@mui/icons-material";
 import endpoints from "../utils/Endpoints.js";
+import {useAlertSnackbar} from "./use_functions/useAlertSnackbar.jsx";
 
 export default function Auth({open, setOpen}) {
     const [isRegistering, setIsRegistering] = useState(false);
-    const [error, setError] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
+    const {openSnackbar,AlertSnackbar}=useAlertSnackbar();
+
     const registerSchema = yup.object().shape({
         email: yup.string().email('Please enter a valid email').required('Email is required'),
         username: yup.string().min(3, 'Username must be at least 3 characters').max(20, 'Username must be maximum 20 of characters').required('Username is required'),
@@ -45,35 +46,41 @@ export default function Auth({open, setOpen}) {
 
     const handleRegisterLoginToggle = () => {
         setIsRegistering(!isRegistering);
-        setError(null)
     }
 
-    const handleLoginSubmit = data => {
-        axios.post(endpoints.auth.login, data)
+    const handleLoginSubmit = async data => {
+        openSnackbar('Logging in','info',6000)
+        await axios.post(endpoints.auth.login, data)
             .then(response => {
                 localStorage.setItem('jwt', response.data)
                 setOpen(false)
                 window.location.reload()
             })
             .catch(error => {
-                setError(error.response?.data?.message || 'Login failed')
+                console.error(error)
+                openSnackbar('Couldn\'t login. Please try again later.','error',6000)
             })
     }
 
-    const handleRegisterSubmit = data => {
-        axios.post(endpoints.auth.register, data)
+    const handleRegisterSubmit = async data => {
+        openSnackbar('Registering','info',6000)
+
+        await axios.post(endpoints.auth.register, data)
             .then(response => {
                 localStorage.setItem('jwt', response.data)
                 setOpen(false)
                 window.location.reload()
             })
             .catch(error => {
-                setError(error.response?.data?.message || 'Registration failed')
+                console.error(error)
+                openSnackbar('Couldn\'t register. Please try again later.','error',6000)
+
             })
     }
 
     const handleClickOnClose = () => setOpen((state)=>!state)
     const handleClickShowPassword = () => setShowPassword((show) => !show);
+
 
     return (
         <Dialog open={open} onClose={handleClickOnClose}>
@@ -206,7 +213,7 @@ export default function Auth({open, setOpen}) {
                     </DialogContent>
                 </form>
             )}
-            {error && <Alert severity="error" sx={{mb: 2}}>{error}</Alert>}
+            <AlertSnackbar/>
         </Dialog>
     )
 }

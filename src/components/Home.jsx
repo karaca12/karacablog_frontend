@@ -19,7 +19,6 @@ import {
     ListItemText,
     Pagination,
     Paper,
-    Snackbar,
     TextField,
     Typography,
     useMediaQuery
@@ -30,6 +29,8 @@ import {jwtDecode} from "jwt-decode";
 import {useTheme} from '@mui/material/styles';
 import {adjustPostOrCommentDateToUserTimezone} from "../utils/DateUtils.js";
 import endpoints from "../utils/Endpoints.js";
+import {useAlertSnackbar} from "./use_functions/useAlertSnackbar.jsx";
+import {truncateContent} from "../utils/TruncateContent.js";
 
 export default function Home({isAuthenticated, setIsAuthenticated}) {
     const [posts, setPosts] = useState([]);
@@ -37,34 +38,34 @@ export default function Home({isAuthenticated, setIsAuthenticated}) {
     const [size] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
     const [createPostDialogOpen, setCreatePostDialogOpen] = useState(false);
-    const navigate = useNavigate();
     const [newPostTitle, setNewPostTitle] = useState('');
     const [newPostContent, setNewPostContent] = useState('');
     const [newTag, setNewTag] = useState('');
     const [tags, setTags] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [errors, setErrors] = useState({});
-    const [snackbarOpen, setSnackbarOpen] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState('');
-    const [snackbarSeverity, setSnackbarSeverity] = useState('info');
+    const [fetchError, setFetchError] = useState(null);
+    const [formErrors, setFormErrors] = useState({});
+    const {openSnackbar, AlertSnackbar} = useAlertSnackbar();
+    const navigate = useNavigate();
     const theme = useTheme();
     const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
     useEffect(() => {
-        setLoading(true);
-        axios.get(endpoints.posts.getAll(page, size))
-            .then(response => {
+        const fetchPosts = async () => {
+            setLoading(true);
+            try {
+                const response = await axios.get(endpoints.posts.getAll(page, size));
                 setPosts(response.data.posts);
                 setTotalPages(response.data.totalPages);
+            } catch (error) {
+                console.error(error);
+                setFetchError('Failed to load posts. Please try again later.');
+            } finally {
                 setLoading(false);
-            }).catch(error => {
-            console.error(error);
-            setError('Failed to load posts. Please try again later.');
-            setLoading(false);
-        })
-
-    }, [page, size])
+            }
+        };
+        fetchPosts();
+    }, [page, size]);
 
 
     const handlePageChange = (event, value) => {
@@ -84,21 +85,21 @@ export default function Home({isAuthenticated, setIsAuthenticated}) {
     }
 
     const handleClickCreatePost = () => setCreatePostDialogOpen((state) => !state)
-    const handleCreatePost = () => {
+    const handleCreatePost = async () => {
         const token = localStorage.getItem("jwt");
         const decodedToken = jwtDecode(token);
         const user = decodedToken.sub;
-        let formErrors = {};
+        let currentFormErrors = {};
         if (!newPostTitle.trim()) {
-            formErrors.title = "Title cannot be empty";
+            currentFormErrors.title = "Title cannot be empty";
         }
         if (!newPostContent.trim()) {
-            formErrors.content = "Content cannot be empty";
+            currentFormErrors.content = "Content cannot be empty";
         }
 
-        setErrors(formErrors)
+        setFormErrors(currentFormErrors)
 
-        if (Object.keys(formErrors).length === 0) {
+        if (Object.keys(currentFormErrors).length === 0) {
             const newPost = {
                 title: newPostTitle,
                 content: newPostContent,
@@ -107,11 +108,9 @@ export default function Home({isAuthenticated, setIsAuthenticated}) {
             };
 
             setCreatePostDialogOpen(false);
-            setSnackbarMessage('Posting');
-            setSnackbarSeverity('info');
-            setSnackbarOpen(true);
+            openSnackbar('Posting', 'info', 6000)
 
-            axios.post(endpoints.posts.create, newPost, {
+            await axios.post(endpoints.posts.create, newPost, {
                 headers: {
                     Authorization: 'Bearer ' + token
                 }
@@ -119,9 +118,7 @@ export default function Home({isAuthenticated, setIsAuthenticated}) {
                 navigate(`/post/${response.data.uniqueNum}`);
             }).catch(error => {
                 console.error(error);
-                setSnackbarMessage('Failed to post. Please try again later.');
-                setSnackbarSeverity('error');
-                setSnackbarOpen(true);
+                openSnackbar('Failed to post. Please try again later.', 'error', 6000)
             });
         }
     }
@@ -138,18 +135,6 @@ export default function Home({isAuthenticated, setIsAuthenticated}) {
     };
 
 
-    const truncateContent = (content, maxLength) => {
-        const newlineIndex = content.indexOf('\n');
-
-        if (newlineIndex !== -1 && newlineIndex < maxLength) {
-            return content.substring(0, newlineIndex) + " ...";
-        }
-
-        return content.length > maxLength ? content.substring(0, maxLength) + " ..." : content;
-    };
-
-    const handleSnackbarClose = () => setSnackbarOpen(false);
-
     return (
         <Fragment>
             <TopAppBar isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated}/>
@@ -162,56 +147,64 @@ export default function Home({isAuthenticated, setIsAuthenticated}) {
                     <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
                         <CircularProgress/>
                     </Box>
-                ) : error ? (
-                    <Alert severity="error">{error}</Alert>
+                ) : fetchError ? (
+                    <Alert severity="error">{fetchError}</Alert>
                 ) : (
                     <List>
-                        {posts.map((post) => (
-                            <Fragment key={post.uniqueNum}>
-                                <ListItem alignItems="flex-start">
-                                    <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
-                                        <ListItemButton onClick={() => handleClickPost(post.uniqueNum)}>
-                                            <ListItemText primary={
-                                                <Typography variant="h6" color="textPrimary"
-                                                            sx={{wordBreak: "break-word", whiteSpace: "pre-wrap"}}>
-                                                    {post.title}
-                                                </Typography>}
-                                                          secondary={
-                                                              <Typography variant="body2" color="textPrimary"
-                                                                          sx={{
-                                                                              wordBreak: "break-word",
-                                                                              whiteSpace: "pre-wrap"
-                                                                          }}>
-                                                                  {truncateContent(post.content, 500)}
-                                                              </Typography>
-                                                          }/>
-                                        </ListItemButton>
-                                        <Button variant="caption" color="textPrimary" ml={2}
-                                                onClick={() => handleAuthorClick(post.author)}>
-                                            Written
-                                            by {post.author} at {adjustPostOrCommentDateToUserTimezone(post.createdAt)}
-                                        </Button>
-                                        <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
-                                            {post.tags.map((tag) => (
-                                                <Button onClick={() => handleSearchTag(tag)} key={tag}
-                                                        sx={{margin: 0.5, padding: 1, wordBreak: "break-word"}}>
-                                                    {tag}
-                                                </Button>
-                                            ))}
-                                        </Box>
-                                    </Paper>
-                                </ListItem>
-                            </Fragment>
-                        ))}
+                        {posts.length > 0 ? (
+                            posts.map((post) => (
+                                <Fragment key={post.uniqueNum}>
+                                    <ListItem alignItems="flex-start">
+                                        <Paper sx={{margin: 0.5, padding: 1, width: '100%'}}>
+                                            <ListItemButton onClick={() => handleClickPost(post.uniqueNum)}>
+                                                <ListItemText primary={
+                                                    <Typography variant="h6" color="textPrimary"
+                                                                sx={{wordBreak: "break-word", whiteSpace: "pre-wrap"}}>
+                                                        {post.title}
+                                                    </Typography>}
+                                                              secondary={
+                                                                  <Typography variant="body2" color="textPrimary"
+                                                                              sx={{
+                                                                                  wordBreak: "break-word",
+                                                                                  whiteSpace: "pre-wrap"
+                                                                              }}>
+                                                                      {truncateContent(post.content, 500)}
+                                                                  </Typography>
+                                                              }/>
+                                            </ListItemButton>
+                                            <Button variant="caption" color="textPrimary" ml={2}
+                                                    onClick={() => handleAuthorClick(post.author)}>
+                                                Written
+                                                by {post.author} at {adjustPostOrCommentDateToUserTimezone(post.createdAt)}
+                                            </Button>
+                                            <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
+                                                {post.tags.map((tag) => (
+                                                    <Button onClick={() => handleSearchTag(tag)} key={tag}
+                                                            sx={{margin: 0.5, padding: 1, wordBreak: "break-word"}}>
+                                                        {tag}
+                                                    </Button>
+                                                ))}
+                                            </Box>
+                                        </Paper>
+                                    </ListItem>
+                                </Fragment>
+                            ))
+                        ) : (
+                            <Paper sx={{margin: 0.5, padding: 1, width: '100%', textAlign: 'center'}}>
+                                <Typography variant="h6" color="textPrimary">
+                                    There are no posts to list.
+                                </Typography>
+                            </Paper>
+                        )}
                     </List>
                 )}
-                {!loading && !error && (
+                {!loading && !fetchError && posts.length>0 &&(
                     <Box display="flex" justifyContent="space-between" my={2}>
                         <Pagination count={totalPages} page={page} onChange={handlePageChange} color="primary"/>
                     </Box>
                 )}
             </Container>
-            {isAuthenticated && !error && !loading &&
+            {isAuthenticated && !fetchError && !loading &&
                 <Fab onClick={handleClickCreatePost} variant="extended" color="primary" aria-label="add" sx={{
                     margin: 0,
                     top: 'auto',
@@ -224,11 +217,7 @@ export default function Home({isAuthenticated, setIsAuthenticated}) {
                     Post
                 </Fab>
             }
-            <Snackbar open={snackbarOpen} onClose={handleSnackbarClose} autoHideDuration={10000} anchorOrigin={{vertical: 'bottom',horizontal: 'center'}}>
-                <Alert severity={snackbarSeverity}>
-                    {snackbarMessage}
-                </Alert>
-            </Snackbar>
+            <AlertSnackbar/>
             <Dialog open={createPostDialogOpen} onClose={handleClickCreatePost} fullWidth={true}
                     fullScreen={fullScreen}>
                 <DialogTitle>Create Post</DialogTitle>
@@ -245,8 +234,8 @@ export default function Home({isAuthenticated, setIsAuthenticated}) {
                         inputProps={{maxLength: 100}}
                         value={newPostTitle}
                         onChange={(e) => setNewPostTitle(e.target.value)}
-                        error={!!errors.title}
-                        helperText={errors.title}
+                        error={!!formErrors.title}
+                        helperText={formErrors.title}
                     />
                     <TextField
                         margin="normal"
@@ -261,8 +250,8 @@ export default function Home({isAuthenticated, setIsAuthenticated}) {
                         inputProps={{maxLength: 10000}}
                         value={newPostContent}
                         onChange={(e) => setNewPostContent(e.target.value)}
-                        error={!!errors.content}
-                        helperText={errors.content}
+                        error={!!formErrors.content}
+                        helperText={formErrors.content}
                     />
                     <TextField
                         margin="normal"
@@ -297,4 +286,3 @@ export default function Home({isAuthenticated, setIsAuthenticated}) {
         </Fragment>
     )
 }
-
