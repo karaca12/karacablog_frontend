@@ -24,7 +24,7 @@ import {
     useMediaQuery
 } from "@mui/material";
 import TopAppBar from "./TopAppBar.jsx";
-import {Add} from "@mui/icons-material";
+import {Add, Clear, Remove} from "@mui/icons-material";
 import {jwtDecode} from "jwt-decode";
 import {useTheme} from '@mui/material/styles';
 import {adjustPostOrCommentDateToUserTimezone} from "../utils/DateUtils.js";
@@ -266,20 +266,20 @@ export default function Home({isAuthenticated, setIsAuthenticated}) {
                         onChange={(e) => setNewTag(e.target.value)}
                         disabled={tags.length === 4}
                     />
-                    <Button disabled={tags.length === 4} onClick={handleAddTag}>Add Tag</Button>
+                    <Button disabled={tags.length === 4} onClick={handleAddTag} startIcon={<Add/>}>Add Tag</Button>
                     {tags.length === 4 &&
                         <Typography>Only 4 tags can be added</Typography>}
                     <Box sx={{display: 'flex', flexWrap: 'wrap', marginTop: 2}}>
                         {tags.map((tag, index) => (
                             <Paper key={index} sx={{margin: 0.5, padding: 1}}>
                                 {tag}
-                                <Button onClick={() => handleRemoveTag(tag)}>Remove</Button>
+                                <Button onClick={() => handleRemoveTag(tag)}><Clear/></Button>
                             </Paper>
                         ))}
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleClickCreatePost}>Cancel</Button>
+                    <Button onClick={handleClickCreatePost} color="secondary">Cancel</Button>
                     <Button type="submit" onClick={handleCreatePost}>Post</Button>
                 </DialogActions>
             </Dialog>

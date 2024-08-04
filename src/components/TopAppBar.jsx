@@ -12,7 +12,7 @@ import {
     TextField,
     Toolbar
 } from "@mui/material";
-import {AccountBoxOutlined, Search} from "@mui/icons-material";
+import {AccountBoxOutlined, Adb, Search} from "@mui/icons-material";
 import {useNavigate} from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
 import {Fragment, useState} from "react";
@@ -56,9 +56,9 @@ export default function TopAppBar({isAuthenticated, setIsAuthenticated}) {
         <Box sx={{flexGrow: 1}}>
             <AppBar position="static">
                 <Toolbar>
-                    <Button variant="h6" component="div" onClick={handleClickHomePage}>
-                        Karacablog
-                    </Button>
+                    <IconButton onClick={handleClickHomePage}>
+                        <Adb color="primary" fontSize="large"/>
+                    </IconButton>
                     <form onSubmit={handleSearch}>
                         <TextField
                             label="Search"
@@ -74,20 +74,20 @@ export default function TopAppBar({isAuthenticated, setIsAuthenticated}) {
                                     </InputAdornment>
                                 )
                             }}
-                            sx={{backgroundColor: 'white'}}
                         />
                     </form>
+                    <Box flexGrow={1}/>
                     {isAuthenticated ? (
                         <Fragment>
                             <IconButton onClick={handleClickProfile} size="large">
-                                <AccountBoxOutlined color="secondary" fontSize="large"/>
+                                <AccountBoxOutlined color="primary" fontSize="large"/>
                             </IconButton>
                             <Button variant="contained" color="secondary"
                                     onClick={handleClickLogout}>Logout</Button>
                         </Fragment>
                     ) : (
-                        <Button variant="contained" color="secondary"
-                                onClick={handleClickAuth}>Login/Register</Button>
+                        <Button variant="contained" color="primary"
+                                onClick={handleClickAuth}>Login</Button>
                     )}
                 </Toolbar>
             </AppBar>
@@ -101,7 +101,7 @@ export default function TopAppBar({isAuthenticated, setIsAuthenticated}) {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleClickLogout} color="primary">Cancel</Button>
-                    <Button type="submit" color="error" onClick={handleLogout}>Logout</Button>
+                    <Button type="submit" color="secondary" onClick={handleLogout}>Logout</Button>
                 </DialogActions>
             </Dialog>
         </Box>

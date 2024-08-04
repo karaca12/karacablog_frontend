@@ -223,7 +223,7 @@ export default function Profile({isAuthenticated, setIsAuthenticated}) {
                         <Button color="primary" onClick={handleClickEditProfile}>
                             Edit Profile
                         </Button>
-                        <Button color="error" onClick={handleCLickChangePassword}>
+                        <Button color="secondary" onClick={handleCLickChangePassword}>
                             Change Password
                         </Button>
                     </Fragment>
@@ -446,7 +446,7 @@ export default function Profile({isAuthenticated, setIsAuthenticated}) {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCLickChangePassword}>Cancel</Button>
-                    <Button type="submit" color="error">Change
+                    <Button type="submit" color="secondary">Change
                         Password</Button>
                 </DialogActions>
             </form>
@@ -460,7 +460,7 @@ export default function Profile({isAuthenticated, setIsAuthenticated}) {
             <DialogContent>Are you sure that you want to change your password?</DialogContent>
             <DialogActions>
                 <Button onClick={handleClickAreYouSurePassword}>Cancel</Button>
-                <Button type="submit" color="error" onClick={handleConfirmChangePassword}>Change Password</Button>
+                <Button type="submit" color="secondary" onClick={handleConfirmChangePassword}>Change Password</Button>
             </DialogActions>
         </Dialog>
 

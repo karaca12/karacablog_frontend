@@ -320,7 +320,7 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
                                 <Button color="primary" onClick={handleClickEditPost}>
                                     Edit
                                 </Button>
-                                <Button color="error" onClick={handleClickDeletePost}>
+                                <Button color="secondary" onClick={handleClickDeletePost}>
                                     Delete
                                 </Button>
                             </Fragment>
@@ -382,7 +382,7 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
                                                 <Fragment>
                                                     <Button color="primary"
                                                             onClick={() => handleClickEditCommentOpen(comment.uniqueNum, comment.content)}>Edit</Button>
-                                                    <Button color="error"
+                                                    <Button color="secondary"
                                                             onClick={() => handleClickDeleteCommentOpen(comment.uniqueNum)}>Delete </Button>
                                                 </Fragment>
                                             }
@@ -493,7 +493,7 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleClickDeletePost} color="primary">Cancel</Button>
-                    <Button type="submit" onClick={handleDeletePost} color="error">Delete</Button>
+                    <Button type="submit" onClick={handleDeletePost} color="secondary">Delete</Button>
                 </DialogActions>
             </Dialog>
 
@@ -545,7 +545,7 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleClickEditCommentClose}>Cancel</Button>
+                    <Button onClick={handleClickEditCommentClose} color="secondary">Cancel</Button>
                     <Button type="submit" onClick={handleEditComment}>Edit Comment</Button>
                 </DialogActions>
             </Dialog>
@@ -558,7 +558,7 @@ export default function Post({isAuthenticated, setIsAuthenticated}) {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleClickDeleteCommentClose} color="primary">Cancel</Button>
-                    <Button type="submit" onClick={handleDeleteComment} color="error">Delete</Button>
+                    <Button type="submit" onClick={handleDeleteComment} color="secondary">Delete</Button>
                 </DialogActions>
             </Dialog>
         </Fragment>

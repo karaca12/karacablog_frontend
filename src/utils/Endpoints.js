@@ -1,3 +1,4 @@
+//todo:change this according to the IPs
 const BASE_URL = 'http://localhost:8080/api';
 
 const endpoints = {
